@@ -1,4 +1,4 @@
-function vector=nyttcoh444(x,x2,x3,A,beta,gam,nk,deltat,tnought)
+function vector=nyttcoh544(x,x2,x3,A,beta,gam,nk,deltat,tnought)
 % This function calculates the polarization using complex wavelets
 % and also 
 %

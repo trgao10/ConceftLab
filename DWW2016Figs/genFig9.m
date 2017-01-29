@@ -1,6 +1,7 @@
-clear ; close all ;
+clear; close all;
 
-addpath('/Users/hautiengwu/Dropbox/ConCeft/SubmissionCode/Conceft') ;
+basePath = fileparts(pwd);
+addpath(genpath(strcat(basePath,'/utils/')));
 scrsz = get(groot,'ScreenSize');
 
 	%% generate the simulated data

@@ -3,7 +3,7 @@
 % Display time-frequency result of the Synchrosqueezing transform and others
 % function imageSQ(t, ytic, M) ;
 %
-function imageSQ(t, ytic, M, Qv) ;
+function imageSQ(t, ytic, M, Qv)
 
 fz = 20;
 

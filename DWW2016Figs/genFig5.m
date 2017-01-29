@@ -1,14 +1,18 @@
-clear ;
-% close all ;
+clear; close all;
+
+basePath = fileparts(pwd);
+addpath(genpath(strcat(basePath,'/utils/')), path);
+scrsz = get(groot,'ScreenSize');
+
+thresh = 0.995;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Plotting clean and noisy signals
 %==================
-scrsz = get(0,'ScreenSize');
 Hz = 64;
 T = 80;
-time = [1/Hz:1/Hz:T]' ;
-N = length(time) ;
+TSamples = [1/Hz:1/Hz:T]' ;
+N = length(TSamples) ;
 freqLow = 0;
 freqHigh = 20;
 alpha = 0.01;
@@ -19,14 +23,13 @@ ExampleID = 2;
 seeds = [1 111 23400];
 dnSampleID = 1:1:(Hz*T);
 
-
 NoiseID = 1;
 initstate(seeds(ExampleID));
-tau = 10 ;
+tau = 10;
 clear sigma
 snrdb = 0;
 loadExamples
-time = time(dnSampleID);
+TSamples = TSamples(dnSampleID);
 if1 = if1(dnSampleID);
 if2 = if2(dnSampleID);
 am1 = am1(dnSampleID);
@@ -42,8 +45,8 @@ trueIF = sparse(round(if1((TN1+1):N)*scaling),(TN1+1):N,am1((TN1+1):N).^2,(freqH
 hf = figure('Position',[1 scrsz(4)/2 scrsz(3) scrsz(4)*2/3]) ;
 
 subplot(4, 4, [1 5]) ;
-plot(time,if1,'k','LineWidth',2),    hold on
-plot(time,if2,'k','LineWidth',2)
+plot(TSamples,if1,'k','LineWidth',2),    hold on
+plot(TSamples,if2,'k','LineWidth',2)
 axis([0 T freqLow freqHigh])
 set(gca,'fontsize',ftsz)
 %xlabel('time') ; ylabel('frequency') ; %title('ground truth')
@@ -62,11 +65,11 @@ if1_test(1:TN1) = nan;
 
 %hf = figure;
 subplot(4, 4, [2 6]) ;
-plot(time,if1_test,'color', [.7 .7 .7], 'LineWidth',3)
+plot(TSamples,if1_test,'color', [.7 .7 .7], 'LineWidth',3)
 hold on
-plot(time,if2_test,'color', [.7 .7 .7], 'LineWidth',3)
-plot(time,if1,'k','LineWidth', 3),
-plot(time,if2,'k','LineWidth', 3)
+plot(TSamples,if2_test,'color', [.7 .7 .7], 'LineWidth',3)
+plot(TSamples,if1,'k','LineWidth', 3),
+plot(TSamples,if2,'k','LineWidth', 3)
 axis([0 T freqLow freqHigh])
 set(gca,'fontsize',ftsz) ; %xlabel('time') ; ylabel('frequency')
 
@@ -87,11 +90,11 @@ if2_test = smooth(if2_test, 200, 'loess');
 if2_test(end-TN2:end) = nan ;
 
 subplot(4, 4, [3 7]) ;
-plot(time,if1_test,'color', [.7 .7 .7], 'LineWidth', 3),
+plot(TSamples,if1_test,'color', [.7 .7 .7], 'LineWidth', 3),
 hold on
-plot(time,if2_test,'color', [.7 .7 .7], 'LineWidth', 3),
-plot(time,if1,'k','LineWidth', 3),
-plot(time,if2,'k','LineWidth', 3)
+plot(TSamples,if2_test,'color', [.7 .7 .7], 'LineWidth', 3),
+plot(TSamples,if1,'k','LineWidth', 3),
+plot(TSamples,if2,'k','LineWidth', 3)
 axis([0 T freqLow freqHigh])
 set(gca,'fontsize',ftsz) ; %xlabel('time') ; ylabel('frequency')
 
@@ -114,11 +117,11 @@ if2_test(end-TN2:end) = nan ;
 
 %hf = figure;
 subplot(4, 4, [4 8]) ;
-plot(time,if1_test,'color', [.7 .7 .7], 'LineWidth', 3),
+plot(TSamples,if1_test,'color', [.7 .7 .7], 'LineWidth', 3),
 hold on
-plot(time,if2_test,'color', [.7 .7 .7], 'LineWidth', 3),
-plot(time,if1,'k','LineWidth', 3),
-plot(time,if2,'k','LineWidth', 3)
+plot(TSamples,if2_test,'color', [.7 .7 .7], 'LineWidth', 3),
+plot(TSamples,if1,'k','LineWidth', 3),
+plot(TSamples,if2,'k','LineWidth', 3)
 axis([0 T freqLow freqHigh])
 set(gca,'fontsize',ftsz) ; %xlabel('time') ; ylabel('frequency')
 
@@ -162,7 +165,7 @@ end
 mksz = 2;
 %hf = figure;
 subplot(4, 4, [10 14]) ;
-imageSQ(time, tfrsqtic, itvPS.^2) ; colormap(1-gray) ;
+imageSQ(TSamples, tfrsqtic, itvPS.^2, thresh) ; colormap(1-gray) ;
 %scatter(time,if1,mksz,am1),hold on
 %scatter(time,if2,mksz,am2)
 %axis([0 T freqLow freqHigh])
@@ -209,7 +212,7 @@ end
 %%
 %hf = figure;
 subplot(4, 4, [11 15]) ;
-imageSQ(time, tfrsqtic, itvPS.^2) ; colormap(1-gray) ;
+imageSQ(TSamples, tfrsqtic, itvPS.^2, thresh) ; colormap(1-gray) ;
 %scatter(time,if1,mksz,am1),hold on
 %scatter(time,if2,mksz,am2)
 %axis([0 T freqLow freqHigh])

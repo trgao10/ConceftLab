@@ -1,4 +1,4 @@
-function [tfrsq, ConceFT, tfrsqtic] = ConceFT_CWT(t, x, lowfreq, highfreq, alpha, MT, opts, Smooth, Hemi) ;
+function [tfrsq, ConceFT, tfrsqtic] = ConceFT_CWT(t, x, lowfreq, highfreq, alpha, MT, opts, Smooth, Hemi)
 
 
 N = length(t) ;

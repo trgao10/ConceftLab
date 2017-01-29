@@ -21,6 +21,7 @@ am1(1:TN1) = 0 ;
 am2(end-TN2:end) = 0 ;
 %% the instantaneous frequency of the simulated signal
 if1 = smooth(cumsum(randn(N,1)) ./ Hz, 400, 'loess') ;
+% if1 = 1 + 6 * if1 ./ max(abs(if1)) ;
 if1 = tau + 6 * if1 ./ max(abs(if1)) ;
 if2 = smooth(cumsum(randn(N,1)) ./ Hz, 300, 'loess') ;
 if2 = pi*2 + 2 * if2 ./ max(abs(if2)) ;
@@ -39,7 +40,6 @@ end
 
 %% Add noise
 switch NoiseID
-    
     case 1
         %% add noise (Gaussian white noise)
         disp('Gaussian')

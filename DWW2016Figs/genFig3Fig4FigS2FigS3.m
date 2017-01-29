@@ -1,11 +1,15 @@
-clear ; close all ;
-scrsz = get(0,'ScreenSize');
+clear; close all;
+
+basePath = fileparts(pwd);
+addpath(genpath(strcat(basePath,'/utils/Conceft/')));
+scrsz = get(groot,'ScreenSize');
+
 ftsz = 22;
 Hz = 160;
 T = 60;
-time = [1/Hz:1/Hz:T]' ;
-N = length(time) ;
-ID = 2; % use 1 for Figure 3 and 4; 2 for EMS
+TSamples = [1/Hz:1/Hz:T]' ;
+N = length(TSamples) ;
+ID = 1; % use 1 for Figure 3 and 4; 2 for EMS
 seeds = [111 4]; % use the first seed for Figure 3 and 4; use the second for those of EMS
 taus = [10 8];
 %==================
@@ -54,9 +58,9 @@ xm3 = clean  + sigma * noise3 ;
 %=============================
 	%% Figure 3 or S2
 figure('Position',[1 scrsz(4)/2 scrsz(3) scrsz(4)/3])
-plot(time, clean+18, 'color', 'k', 'linewidth', 1) ; hold on ;
-plot(time, if1, 'color', [.7 .7 .7], 'linewidth', 3) ;
-plot(time, if2, 'color', [.7 .7 .7], 'linewidth', 3) ;
+plot(TSamples, clean+18, 'color', 'k', 'linewidth', 1) ; hold on ;
+plot(TSamples, if1, 'color', [.7 .7 .7], 'linewidth', 3) ;
+plot(TSamples, if2, 'color', [.7 .7 .7], 'linewidth', 3) ;
 axis([15 40 2 inf]) ; set(gca, 'fontsize', 22) ;
 xlabel('Time (Sec)') ; ylabel('Frequency (Hz)') ;
 
@@ -66,10 +70,10 @@ xlabel('Time (Sec)') ; ylabel('Frequency (Hz)') ;
 figure('Position',[1 scrsz(4)/2 scrsz(3) scrsz(4)/2])
 a1 = 1.1*range(xm1)/2 ; a2 = 1.1*range(xm2)/2 ; a3 = 1.1*range(xm3)/2 ; a4 = 1.1*range(clean)/2 ;
 a = a1+a2 ; b = a1+2*a2+a3 ; c = a1+2*a2+2*a3+a4 ;
-plot(time, clean + c, 'color', 'k', 'linewidth', 1.2) ; hold on ; 
-plot(time, xm1 + b, 'color', [.5 .5 .5], 'linewidth', 1.2) ; hold on ; 
-plot(time, xm2 + a, 'color', [.5 .5 .5], 'linewidth', 1.2) ;
-plot(time, xm3, 'color', [.5 .5 .5], 'linewidth', 1.2) ;
+plot(TSamples, clean + c, 'color', 'k', 'linewidth', 1.2) ; hold on ; 
+plot(TSamples, xm1 + b, 'color', [.5 .5 .5], 'linewidth', 1.2) ; hold on ; 
+plot(TSamples, xm2 + a, 'color', [.5 .5 .5], 'linewidth', 1.2) ;
+plot(TSamples, xm3, 'color', [.5 .5 .5], 'linewidth', 1.2) ;
 set(gca, 'ytick', [0 a b c]) ; set(gca, 'fontsize', 22) ;
 set(gca, 'yticklabel', ['  Poisson'; 'ARMA(1,1)'; ' Gaussian'; '    Clean']) ;
 axis([15 40 -inf inf]) ;

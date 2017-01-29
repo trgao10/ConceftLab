@@ -1,10 +1,10 @@
-clear ; close all ;
+clear; close all;
 
-addpath('/Users/hautiengwu/Dropbox/ConCeft/SubmissionCode/Conceft') ;
-
+basePath = fileparts(pwd);
+addpath(genpath(strcat(basePath,'/utils/')));
+scrsz = get(groot,'ScreenSize');
 
 %%
-scrsz = get(0,'ScreenSize');
 Hz = 160;
 T = 60;
 time = [1/Hz:1/Hz:T]' ;
@@ -67,7 +67,7 @@ end
 %% obtaining the range from STFT results
 LLstft = zeros(3,3,2);
 HHstft = zeros(3,3,2);
-for ii = 1:3;
+for ii = 1:3
 	for jj = 1:2
 	    ExampleID = jj;
 	    tau = taus(jj);

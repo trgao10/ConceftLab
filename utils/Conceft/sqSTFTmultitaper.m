@@ -1,5 +1,4 @@
-function [MultiTaper, MultiTaperAll tfrsqtic] = sqSTFTmultitaper(x, lowFreq, highFreq, alpha, WinLen, dim, supp, Smooth) ;
-
+function [MultiTaper, MultiTaperAll, tfrsqtic] = sqSTFTmultitaper(x, lowFreq, highFreq, alpha, WinLen, dim, supp, Smooth)
 %
 % Usage: 
 % 	[tfrsq, ConceFT, tfrsqtic] = sqSTFTmultitaper(t, x, lowFreq, highFreq, alpha, WinLen, dim, supp)
@@ -10,7 +9,7 @@ function [MultiTaper, MultiTaperAll tfrsqtic] = sqSTFTmultitaper(x, lowFreq, hig
 %
 % Example:
 % 	[tfrsq, MultiTaper, tfrsqtic] = sqSTFT([1:length(y)]', y, 0,0.5, 0.0002, 121, 4, 6);
-
+%
 
 N = length(x) ;
 
