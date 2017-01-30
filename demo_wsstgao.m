@@ -24,7 +24,6 @@ am1(1:500) = 0;
 am2(end-600:end) = 0;
 
 if1 = smooth(cumsum(randn(N,1)) ./ Fs, 400, 'loess');
-% if1 = 35 + 6 * if1 ./ max(abs(if1));
 if1 = 10 + 6 * if1 ./ max(abs(if1));
 if2 = smooth(cumsum(randn(N,1)) ./ Fs, 300, 'loess');
 if2 = pi + 3 * if2 ./ max(abs(if2));
