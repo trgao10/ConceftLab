@@ -1,4 +1,4 @@
-function [tfr, tfrtic, tfrsq, tfrsqtic, sqPsift, omega, sqDPsift, dtfr] = sqCWTbase(t, x, freqlow, freqhigh, alpha, opts, Smooth, Hemi)
+function [tfr, tfrtic, tfrsq, tfrsqtic, sqPsift, omega, sqDPsift, dtfr] = sqCWTbase(x, Fs, freqlow, freqhigh, alpha, opts, Smooth, Hemi)
 %
 % Synchrosqueezing transform ver 0.5 (2015-03-09)
 % You can find more information in 
@@ -20,10 +20,8 @@ function [tfr, tfrtic, tfrsq, tfrsqtic, sqPsift, omega, sqDPsift, dtfr] = sqCWTb
 %		  v0.4 2012-12-12
 %		  v0.5 2015-03-09
 
-	%% you can play with these 4 parameters, but the results might not be
-	%% that different if the change is not crazy
-% Ex = mean(abs(x).^2);
 Gamma = 1.0e-8;
+% Ex = mean(abs(x).^2);
 % Gamma = 1.0e-8*Ex;  % originally it was 1e-6*Ex
 %Gamma = 1e-8 ;
 % nvoice = 128;
@@ -32,9 +30,7 @@ Gamma = 1.0e-8;
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 % noctave = floor(log2(length(x))) - oct;
-dt = t(2) - t(1);
-
-    
+dt = 1/Fs;
 %+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     %% Continuous wavelet transform 
 % x = x - mean(x);
@@ -51,6 +47,7 @@ omega(abs(omega)<Gamma | isinf(abs(omega))) = NaN;
     	%% Synchro-squeezing transform
 
 [tfrsq, tfrsqtic] = SQ(tfr, omega, freqlow, freqhigh, alpha, dt, Smooth, Hemi);
+% [tfrsq, tfrsqtic] = SQ_logscale(tfr, omega, freqlow, freqhigh, alpha, dt);
 tfr = transpose(tfr);
 tfrsq = transpose(tfrsq);
 dtfr = transpose(dtfr);
@@ -79,12 +76,12 @@ tfrsqtic = (1:1:nalpha)*alpha + tfrsqticlow;
 
 tfrsq = zeros(n, nalpha);
 ntfrsqtic = length(tfrsqtic);
-	
-Mid = round(length(tfrsqtic)/2) ;
-Delta = 20*(tfrsqtic(2)-tfrsqtic(1)).^2 ;
-weight = exp(-(tfrsqtic(Mid-10:Mid+10)-tfrsqtic(Mid)).^2/Delta) ;
-weight = weight ./ sum(weight) ;
-weightIDX = [Mid-10:Mid+10] - Mid ;
+
+% Mid = round(length(tfrsqtic)/2) ;
+% Delta = 20*(tfrsqtic(2)-tfrsqtic(1)).^2 ;
+% weight = exp(-(tfrsqtic(Mid-10:Mid+10)-tfrsqtic(Mid)).^2/Delta) ;
+% weight = weight ./ sum(weight) ;
+% weightIDX = [Mid-10:Mid+10] - Mid ;
 
 for b = 1:n             %% Synchro-
     for kscale = 1: nscale       %% -Squeezing
@@ -98,33 +95,34 @@ for b = 1:n             %% Synchro-
             if (isfinite(k) && (k > 0) && (k < ntfrsqtic-1))
                 ha = tfrsqtic(k+1)-tfrsqtic(k);
                 
+            tfrsq(b,k) = tfrsq(b,k) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
                 
-                if Smooth
-                    IDXb = find((k+weightIDX < ntfrsqtic-1) & (k+weightIDX > 0)) ;
-                    IDXa = k+weightIDX(IDXb) ;
-                    
-                    if Hemi
-                        if real(tfd(b,kscale))>0
-                            tfrsq(b,IDXa) = tfrsq(b,IDXa) + weight(IDXb)*log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                        else
-                            tfrsq(b,IDXa) = tfrsq(b,IDXa) - weight(IDXb)*log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                        end
-                    else
-                        tfrsq(b,IDXa) = tfrsq(b,IDXa) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                    end
-                else
-                    
-                    if Hemi
-                        if real(tfd(b,kscale))>0
-                            tfrsq(b,k) = tfrsq(b,k) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                        else
-                            tfrsq(b,k) = tfrsq(b,k) - log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                        end
-                    else
-                        tfrsq(b,k) = tfrsq(b,k) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
-                    end
-                    
-                end
+%                 if Smooth
+%                     IDXb = find((k+weightIDX < ntfrsqtic-1) & (k+weightIDX > 0)) ;
+%                     IDXa = k+weightIDX(IDXb) ;
+%                     
+%                     if Hemi
+%                         if real(tfd(b,kscale))>0
+%                             tfrsq(b,IDXa) = tfrsq(b,IDXa) + weight(IDXb)*log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                         else
+%                             tfrsq(b,IDXa) = tfrsq(b,IDXa) - weight(IDXb)*log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                         end
+%                     else
+%                         tfrsq(b,IDXa) = tfrsq(b,IDXa) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                     end
+%                 else
+%                     
+%                     if Hemi
+%                         if real(tfd(b,kscale))>0
+%                             tfrsq(b,k) = tfrsq(b,k) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                         else
+%                             tfrsq(b,k) = tfrsq(b,k) - log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                         end
+%                     else
+%                         tfrsq(b,k) = tfrsq(b,k) + log(2)*tfd(b,kscale)*sqrt(qscale)./ha/nvoice;
+%                     end
+%                     
+%                 end
                 
             end
         end

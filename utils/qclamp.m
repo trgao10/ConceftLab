@@ -10,8 +10,10 @@ lowQVal = quantile(inMat(:), lowQ);
 highQVal = quantile(inMat(:), highQ);
 
 outMat = inMat;
-outMat(inMat < lowQVal) = lowQVal;
-outMat(inMat > highQVal) = highQVal;
+outMat(inMat < lowQVal) = min(inMat(:));
+outMat(inMat > highQVal) = max(inMat(:));
+% outMat(inMat < lowQVal) = lowQVal;
+% outMat(inMat > highQVal) = highQVal;
 
 end
 

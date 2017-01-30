@@ -19,10 +19,10 @@ Fs = 1000;
 T = 4; %%% signal duration time
 tSamples = 1/Fs:1/Fs:T;
 % tSamples = 0:1/Fs:T;
-omega_0 = 400;
+omega_0 = 100;
 % instFreq = omega_0+tSamples*(Fs/2-omega_0)/T;
-% instFreq = omega_0+tSamples*(Fs/2-omega_0)/T;
-instFreq = omega_0*ones(size(tSamples));
+instFreq = omega_0+tSamples*(Fs/2-omega_0)/T;
+% instFreq = omega_0*ones(size(tSamples));
 AmT = ones(size(tSamples));
 % AmT = (TSamples-mean(TSamples)).^2;
 sigClean = AmT.*cos(2*pi*cumsum(instFreq)/Fs);
@@ -40,8 +40,8 @@ sigClean = AmT.*cos(2*pi*cumsum(instFreq)/Fs);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic;
 [NativeSSTResult,NativeSSTFreq] = wsstgao(sigClean, Fs, 'morse',...
-    'VoicesPerOctave', 64, 'ExtendSignal', false,...
-    'WaveletParameters', struct('be',80,'ga',1));
+    'VoicesPerOctave', 128, 'ExtendSignal', true,...
+    'WaveletParameters', struct('be',80,'ga',1,'k',0));
 % [NativeSSTResult,NativeSSTFreq] = wsst(sigClean, Fs, 'amor', 'VoicesPerOctave', 48);
 toc;
 
@@ -54,7 +54,7 @@ opts = struct('motherwavelet', 'morse', 'k', 0, 'beta', 80, 'gam', 1);
 FreqRes = (Fs/4)/(length(NativeSSTFreq)-1);
 
 tic;
-[CWTResult, cwt_tic, sqCWTResult, sqcwt_tic] = sqCWTbase(tSamples', sigClean', 0, Fs/2, FreqRes, opts, 0, 1);
+[CWTResult, cwt_tic, sqCWTResult, sqcwt_tic] = sqCWTbase(sigClean', Fs, 0, Fs/2, FreqRes, opts, 0, 1);
 % [CWTResult, cwt_tic, sqCWTResult, sqcwt_tic] = sqCWTbase(tSamples(2:end)', sigClean(2:end)', 0, Fs/2, FreqRes, opts, 0, 0);
 toc;
 
@@ -85,9 +85,9 @@ pcolor(tSamples, NativeSSTFreq, log(1+abs(NativeSSTResult)));
 % axis xy
 shading interp
 colormap(1-gray);
-% hold on
-% plot(tSamples, instFreq, 'r', 'linewidth', 1);
-% xlabel('Seconds'); ylabel('Frequency');
+hold on
+plot(tSamples, instFreq, 'r', 'linewidth', 1);
+xlabel('Seconds'); ylabel('Frequency');
 
 subplot(1,2,2);
 pcolor(tSamples, sqcwt_tic, log(1+abs(sqCWTResult)));

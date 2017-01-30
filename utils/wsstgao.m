@@ -20,11 +20,6 @@ function [sst,f,cwtcfs,cwtscales,cwtfreq,psift,phasetf,dpsift,dcwtcfs]  = wsstga
 %   a positive scalar. If you specify the sampling frequency, WSST returns
 %   the frequencies in hertz.
 %
-%   [...] = wsstgao(X,Ts) uses the positive <a href="matlab:help duration">
-%   duration</a>, Ts, to compute the scale-to-frequency conversion, F. Ts
-%   is the time between samples of X. F has units of cycles/unit time where
-%   the unit of time is the same time unit as the duration.
-%
 %   [...] = wsstgao(...,WAV) uses the analytic wavelet specified by WAV to
 %   compute the synchrosqueezed transform. Valid choices for WAV are
 %   'amor' and 'bump' for the analytic Morlet and bump wavelet. If
@@ -52,27 +47,10 @@ function [sst,f,cwtcfs,cwtscales,cwtfreq,psift,phasetf,dpsift,dcwtcfs]  = wsstga
 %   the synchrosqueezed transform is plotted in cycles/unit time where the
 %   time unit is the same as the duration.
 %
-%   % Example 1:
-%   %   Obtain the wavelet synchrosqueezed transform of a quadratic chirp.
-%   %   The chirp is sampled at 1000 Hz.
-%   load quadchirp;
-%   [sst,f] = wsstgao(quadchirp,1000);
-%   hp = pcolor(tquad,f,abs(sst));
-%   hp.EdgeColor = 'none';
-%   title('Wavelet Synchrosqueezed Transform');
-%   xlabel('Time'); ylabel('Hz');
-%
-%   % Example 2:
-%   %   Obtain the wavelet synchrosqueezed transform of the sunspot
-%   %   data. Specify the sampling interval to be 1 for one sample per
-%   %   year.
-%   load sunspot.dat;
-%   wsstgao(sunspot(:,2),years(1))
-%
-%   See also iwsst, wsstridge, duration
 %
 %
-narginchk(1,9);
+
+narginchk(1,15);
 nbSamp = numel(x);
 x = x(:)';
 validateattributes(x,{'double'},{'row','finite','real'},'wsst','X');
@@ -102,6 +80,8 @@ elseif (isempty(params.fs) && ~isempty(params.Ts))
 else
 end
 
+% T = nbSamp*dt;
+
 a0 = 2^(1/numVoices);
 scales = a0.^(1:numScales);
 NbSc = numel(scales);
@@ -123,7 +103,7 @@ N = numel(x);
 
 %%% Create frequency vector for CWT computation
 omega = (1:fix(N/2));
-omega = omega.*((2.*pi)/N);
+omega = omega*((2.*pi)/N); %%% omage so obtained are angular frequencies (with 2*pi multiplied)
 omega = [0., omega, -omega(fix((N-1)/2):-1:1)];
 
 %%% Compute FFT of the (padded) time series
@@ -141,18 +121,40 @@ cwtcfs = cwtcfs(:,NumExten+1:end-NumExten);
 dcwtcfs = dcwtcfs(:,NumExten+1:end-NumExten);
 
 %%% Compute the phase transform
+%%% The factor 2*pi here comes from the specific form of Discrete Fourier
+%%% transform, not the 2*pi in the angular frequency
 phasetf = imag(dcwtcfs./cwtcfs)./(2*pi);
+% phasetf = imag(dcwtcfs./cwtcfs);
 
 %%% Threshold for synchrosqueezing
 phasetf(abs(phasetf)<params.thr | isinf(abs(phasetf))) = NaN;
 
 %%% Create frequency vector for output
-% log2Nyquist = log2(1/(2*dt));
-log2Nyquist = log2(fs/2);
-log2Fund = log2(1/(nbSamp*dt));
-freq = 2.^linspace(log2Fund,log2Nyquist,numScales);
+if isfield(params, 'FreqBounds') && isfield(params, 'FreqRes')
+    if strcmpi(params.sqType, 'log')
+%         log2Nyquist = log2(fs/2);
+%         log2Fund = log2(1/(nbSamp*dt));
+        log2LowFreq = log2(max(min(params.FreqBounds), 1/(nbSamp*dt)));
+        log2HighFreq = log2(min(max(params.FreqBounds), fs/2));
+        numFreqs = fix(abs(log2HighFreq-log2LowFreq) / (params.FreqRes*dt))+1;
+        freq = 2.^linspace(log2LowFreq,log2HighFreq,numFreqs);
+    else
+        LowFreq = max(min(params.FreqBounds), 1/(nbSamp*dt));
+        HighFreq = min(max(params.FreqBounds), fs/2);
+        numFreqs = fix(abs(HighFreq-LowFreq) / params.FreqRes)+1;
+        freq = linspace(LowFreq, HighFreq, numFreqs);
+%         freq = linspace(1/(nbSamp*dt), fs/2, numScales);
+    end
+else
+    params.sqType = 'log';
+    log2Nyquist = log2(fs/2);
+    log2Fund = log2(1/(nbSamp*dt));
+    freq = 2.^linspace(log2Fund,log2Nyquist,numScales);
+end
 
-Tx = 1/numVoices*sstalgo(cwtcfs,phasetf,params.thr);
+% log2Nyquist = log2(1/(2*dt));
+
+Tx = 1/numVoices*sstalgo(cwtcfs,phasetf,params.thr,params.sqType,freq,dt);
 
 if (nargout == 0)
     plotsst(Tx,freq,dt,params.engunitflag,params.normalizedfreq,Units);
@@ -182,16 +184,19 @@ NbSc = numel(scales);
 if strcmpi(WAV,'morse')
     ga = wavparam.ga;
     be = wavparam.be;
+    k = wavparam.k;
+    disp('Morse Wavelet Parameters:');
     disp(['ga = ' num2str(ga)]);
     disp(['be = ' num2str(be)]);
-    [wft,freq] = wavelet.internal.morsewavft(omega,scales,ga,be);
+    disp(['k = ' num2str(k)]);
+    [wft,freq] = morsewavft(omega,scales,ga,be,k);
 else
-    [wft,freq] = wavelet.internal.waveft(WAV,omega,scales);
+    [wft,freq] = waveft(WAV,omega,scales);
 end
 
 %%% Compute derivatives
 omegaMatrix = repmat(omega,NbSc,1);
-dwft = 1j*omegaMatrix.*wft;
+dwft = 2*pi*1j*omegaMatrix.*wft;
 
 end
 
@@ -266,14 +271,50 @@ if (any(tfsampinterval) && nnz(tfsampinterval) == 1)
 end
 
 %%% Look for Name-Value pairs
+freqbounds = find(strncmpi('FreqBounds',varargin,1));
+if any(freqbounds)
+    params.FreqBounds= varargin{freqbounds+1};
+    varargin(freqbounds:freqbounds+1) = [];
+    if isempty(varargin)
+        return;
+    end
+end
+
+
+freqres = find(strncmpi('freqres',varargin,1));
+
+if any(freqres)
+    params.FreqRes = varargin{freqres+1};
+    %validate the value is numeric
+    validateattributes(params.FreqRes,{'numeric'},{'positive','scalar'},...
+        'wsstgao','VoicesPerOctave');
+    varargin(freqres:freqres+1) = [];
+    if isempty(varargin)
+        return;
+    end
+end
+
+
 numvoices = find(strncmpi('voicesperoctave',varargin,1));
 
 if any(numvoices)
     params.nv = varargin{numvoices+1};
-    %validate the value is logical
+    %validate the value is numeric
     validateattributes(params.nv,{'numeric'},{'positive','scalar',...
         'even','>=',10,'<=',1024},'wsstgao','VoicesPerOctave');
     varargin(numvoices:numvoices+1) = [];
+    if isempty(varargin)
+        return;
+    end
+end
+
+
+sqtype = find(strncmpi('SqType',varargin,1));
+
+if any(sqtype)
+    params.sqType = varargin{sqtype+1};
+    params.sqType = validatestring(params.sqType,{'linear','log'},'wsstgao','sqType');
+    varargin(sqtype:sqtype+1) = [];
     if isempty(varargin)
         return;
     end
@@ -284,7 +325,7 @@ extendsignal = find(strncmpi('extendsignal',varargin,1));
 
 if any(extendsignal)
     params.pad = varargin{extendsignal+1};
-    
+    %validate the value is logical
     if ~isequal(params.pad,logical(params.pad))
         error(message('Wavelet:FunctionInput:Logical'));
     end
@@ -293,6 +334,7 @@ if any(extendsignal)
         return;
     end
 end
+
 
 waveletparameters = find(strncmpi('waveletparameters',varargin,1));
 if any(waveletparameters)
@@ -304,7 +346,7 @@ if any(waveletparameters)
     end
 end
 
-%%% Only scalar left must be sampling frequency or sampling interval
+
 %%% Only scalar left must be sampling frequency
 tfsampfreq = cellfun(@(x) (isscalar(x) && isnumeric(x)),varargin);
 
@@ -335,6 +377,9 @@ if strncmpi(params.WAV,'morse',1)
     if ~isfield(params.wavparam, 'ga')
         params.wavparam.ga = 3;
     end
+    if ~isfield(params.wavparam, 'k')
+        params.wavparam.k = 0;
+    end
 elseif strncmpi(params.WAV,'amor',1)
     if ~isfield(params.wavparam, 'cf')
         params.wavparam.cf = 6;
@@ -350,18 +395,106 @@ end
 
 end
 
-%------------------------------------------------------------------------
-function Tx = sstalgo(cwtcfs,phasetf,gamma)
+% %------------------------------------------------------------------------
+% function Tx = sstalgo(cwtcfs,phasetf,gamma,sqType,freqs,T)
+% %%% The validity of freq should have been checked earlier in the main
+% %%% rountine "wsstgao"
+% 
+% % M = size(cwtcfs,1);
+% N = size(cwtcfs,2);
+% numFreqs = length(freqs);
+% 
+% if strcmpi(sqType, 'log')
+%     log2Fund = log2(max(T/N,min(freqs)));
+%     log2Nyquist = log2(min(T/2,max(freqs)));
+%     iRow = real(1 + floor(numFreqs/(log2Nyquist-log2Fund)*(log2(phasetf)-log2Fund)));
+% elseif strcmpi(sqType, 'linear')
+% %     freqBinSize = freq(2)-freq(1);
+% %     iRow = real(1 + floor((phasetf-freq(1))/freqBinSize));
+%     iRow = real(1 + floor(numFreqs/(T/2-T/N)*(phasetf-T/N)));
+% end
+% 
+% idxphasetf = find(iRow>0 & iRow<=numFreqs & ~isnan(iRow));
+% idxcwtcfs = find(abs(cwtcfs)>gamma);
+% idx = intersect(idxphasetf,idxcwtcfs);
+% iCol = repmat(1:size(cwtcfs,2),size(cwtcfs,1),1);
+% % Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),size(cwtcfs));
+% Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),[numFreqs, size(cwtcfs,2)]);
+% 
+% end
 
-M = size(cwtcfs,1);
+%------------------------------------------------------------------------
+function Tx = sstalgo(cwtcfs,phasetf,gamma,sqType,freqs,dt)
+%%% The validity of freq should have been checked earlier in the main
+%%% rountine "wsstgao"
+%%% phasetf is really the "angular frequency", with 2*pi already multiplied
+%%% The right way to handle freqs is first to normalize them appropriately
+%%% so they belong to the unit interval, then multiply them by 2*pi
+
+% M = size(cwtcfs,1);
 N = size(cwtcfs,2);
-log2Fund = log2(1/N);
-log2Nyquist = log2(1/2);
-iRow = real(1 + floor(M/(log2Nyquist-log2Fund)*(log2(phasetf)-log2Fund)));
-idxphasetf = find(iRow>0 & iRow<=M & ~isnan(iRow));
+numFreqs = length(freqs);
+phasetf = phasetf / (2*pi);
+freqs = freqs*dt; %%% this is to divide each frequency by Fs
+
+if strcmpi(sqType, 'log')
+    log2Fund = log2(max(1/N,min(freqs)));
+    log2Nyquist = log2(min(1/2,max(freqs)));
+    iRow = real(1 + floor(numFreqs/(log2Nyquist-log2Fund)*(log2(phasetf)-log2Fund)));
+elseif strcmpi(sqType, 'linear')
+    FundFreq = max(1/N,min(freqs));
+    NyquistFreq = min(1/2,max(freqs));
+    iRow = real(1 + floor(numFreqs/(NyquistFreq-FundFreq)*(phasetf-FundFreq)));
+    %     iRow = real(1 + floor(numFreqs/(1/2-1/N)*(phasetf-1/N)));
+    %     freqBinSize = freq(2)-freq(1);
+    %     iRow = real(1 + floor((phasetf-freq(1))/freqBinSize));
+end
+
+% if strcmpi(sqType, 'log')
+%     log2Fund = log2(1/N);
+%     log2Nyquist = log2(1/2);
+% %     log2Fund = log2(1/N);
+% %     log2Nyquist = log2(1/2);
+%     iRow = real(1 + floor(numFreqs/(log2Nyquist-log2Fund)*(log2(phasetf)-log2Fund)));
+% %     log2Low = log2(freq(1));
+% %     freqBinSize = log2(freq(2))-log2(freq(1));
+% %     log2High = log2(freq(end));
+% %     iRow = real(1 + floor((log2(phasetf)-log2Low)/freqBinSize));
+% elseif strcmpi(sqType, 'linear')
+% %     freqBinSize = freq(2)-freq(1);
+% %     iRow = real(1 + floor((phasetf-freq(1))/freqBinSize));
+%     iRow = real(1 + floor(numFreqs/(1/2-1/N)*(phasetf-1/N)));
+% end
+
+idxphasetf = find(iRow>0 & iRow<=numFreqs & ~isnan(iRow));
 idxcwtcfs = find(abs(cwtcfs)>gamma);
 idx = intersect(idxphasetf,idxcwtcfs);
-iCol = repmat(1:N,M,1);
-Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),size(cwtcfs));
+iCol = repmat(1:size(cwtcfs,2),size(cwtcfs,1),1);
+% Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),size(cwtcfs));
+Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),[numFreqs, size(cwtcfs,2)]);
 
 end
+
+%------------------------------------------------------------------------
+% function Tx = sstalgo(cwtcfs,phasetf,gamma,sqType,freq)
+% %%% The validity of freq should have been checked earlier in the main
+% %%% rountine "wsstgao"
+% 
+% M = size(cwtcfs,1);
+% N = size(cwtcfs,2);
+% 
+% if strcmpi(sqType, 'log')
+%     log2Fund = log2(1/N);
+%     log2Nyquist = log2(1/2);
+%     iRow = real(1 + floor(M/(log2Nyquist-log2Fund)*(log2(phasetf)-log2Fund)));
+% elseif strcmpi(sqType, 'linear')
+%     iRow = real(1 + floor(M/(1/2-1/N)*(phasetf-1/N)));
+% end
+% 
+% idxphasetf = find(iRow>0 & iRow<=M & ~isnan(iRow));
+% idxcwtcfs = find(abs(cwtcfs)>gamma);
+% idx = intersect(idxphasetf,idxcwtcfs);
+% iCol = repmat(1:N,M,1);
+% Tx = accumarray([iRow(idx) iCol(idx)],cwtcfs(idx),size(cwtcfs));
+% 
+% end

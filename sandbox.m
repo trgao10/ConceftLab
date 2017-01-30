@@ -7,9 +7,10 @@ scrsz = get(groot,'ScreenSize');
 
 %% set up parameters
 Fs = 100;
-tSamples = (1/Fs:1/Fs:16)';
+T = 16;
+tSamples = (1/Fs:1/Fs:T)';
 N = length(tSamples);
-FreqBounds = [0,0.5];
+FreqBounds = [0,0.2];
 FreqRes = 2e-4;
 
 %% generate random signal using the model in Conceft paper
@@ -54,13 +55,15 @@ targetSig = clean;
 
 %% SST-CWT
 tic;
-[sstResult, instFreqTic, cwtcfs, cwtscales, ~, psift, nativeOmega, dpsift, dcwtcfs] = wsstgao(targetSig, Fs, 'morse',...
+[sstResult, instFreqTic, cwtcfs, cwtscales, ~, psift, nativeOmega, dpsift, dcwtcfs]...
+    = wsstgao(targetSig, Fs, 'morse',...
     'VoicesPerOctave', 32, 'ExtendSignal', false,...
-    'WaveletParameters', struct('be',80,'ga',1));
+    'WaveletParameters', struct('be',80,'ga',1,'k',0),...
+    'SqType', 'linear', 'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 toc;
 
 itvPS = abs(Fs*sstResult/2).^2;
-itvPS_logscale = qclamp(log(1+itvPS), 0.005);
+itvPS_logscale = qclamp(log(1+itvPS), 0.01);
 
 %% SST-CWT with Gaurav-Wu implementation
 opts = struct('motherwavelet', 'morse', 'k', 0, 'beta', 80, 'gam', 1);
@@ -68,69 +71,69 @@ opts = struct('motherwavelet', 'morse', 'k', 0, 'beta', 80, 'gam', 1);
 
 tic;
 % [CWTResult, cwt_tic, sqCWTResult, sqcwt_tic] = sqCWTbase(tSamples, targetSig, 0, Fs/2, FreqRes, opts, 0, 1);
-[CWTResult, cwt_tic, sqCWTResult, sqcwt_tic, sqPsift, sqOmega, sqDPsift, DCWTResult] = sqCWTbase(tSamples, targetSig, FreqBounds(1)*Fs, FreqBounds(2)*Fs, FreqRes*Fs, opts, 0, 1);
+[CWTResult, cwt_tic, sqCWTResult, sqcwt_tic, sqPsift, sqOmega, sqDPsift, DCWTResult] = sqCWTbase(targetSig, Fs, FreqBounds(1)*Fs, FreqBounds(2)*Fs, FreqRes*Fs, opts, 0, 1);
 toc;
 
 Conceft_itvPS = abs(Fs*sqCWTResult/2).^2;
 Conceft_itvPS_logscale = qclamp(log(1+Conceft_itvPS), 0.001);
 
-%% compare DFT of wavelets
-figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'DFT of Wavelets');
-subplot(1,2,1);
-imagesc(abs(psift));
-title('internal', 'Interpreter', 'latex', 'fontsize', 20);
-subplot(1,2,2);
-imagesc(abs(sqPsift));
-% axis xy
-title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
-
-%% compare DFT of derivatives of wavelets
-figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'DFT of Derivatives of Wavelets');
-subplot(1,2,1);
-imagesc(abs(dpsift));
-title('internal', 'Interpreter', 'latex', 'fontsize', 20);
-subplot(1,2,2);
-imagesc(abs(sqDPsift));
-title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
-
+% %% compare DFT of wavelets
+% figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'DFT of Wavelets');
+% subplot(1,2,1);
+% imagesc(abs(psift));
+% title('internal', 'Interpreter', 'latex', 'fontsize', 20);
+% subplot(1,2,2);
+% imagesc(abs(sqPsift));
+% % axis xy
+% title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
+% 
+% %% compare DFT of derivatives of wavelets
+% figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'DFT of Derivatives of Wavelets');
+% subplot(1,2,1);
+% imagesc(abs(dpsift));
+% title('internal', 'Interpreter', 'latex', 'fontsize', 20);
+% subplot(1,2,2);
+% imagesc(abs(sqDPsift));
+% title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
+% 
 %% compare phase transforms
-figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)]);
-subplot(1,2,1);
-imagesc(nativeOmega);
-title('internal', 'Interpreter', 'latex', 'fontsize', 20);
-subplot(1,2,2);
-imagesc(sqOmega');
-title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
+% figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)]);
+% subplot(1,2,1);
+% imagesc(nativeOmega);
+% title('internal', 'Interpreter', 'latex', 'fontsize', 20);
+% subplot(1,2,2);
+% imagesc(sqOmega');
+% title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
 
-%% compare wavelet coefficients
-figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)],'Name','CWT coefficients');
-subplot(1,2,1);
-imagesc(abs(cwtcfs));
-% pcolor(tSamples, cwtscales, abs(cwtcfs));
+% %% compare wavelet coefficients
+% figure('Position',[1 scrsz(4)/2 scrsz(3)*2 scrsz(4)],'Name','CWT coefficients');
+% subplot(1,2,1);
 % imagesc(abs(cwtcfs));
-% axis xy
-% shading interp
-title('internal', 'Interpreter', 'latex', 'fontsize', 20);
-subplot(1,2,2);
-imagesc(abs(CWTResult));
-% imagesc(abs(CWTResult(end:-1:1,:)));
-% axis xy
-% shading interp
-title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
-
-%% compare derivaties of wavelet coefficients
-figure('Position', [1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'Derivatives of CWT coefficients');
-subplot(1,2,1);
-imagesc(abs(dcwtcfs));
-title('internal', 'Interpreter', 'latex', 'fontsize', 20);
-subplot(1,2,2);
-imagesc(abs(DCWTResult));
-title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
+% % pcolor(tSamples, cwtscales, abs(cwtcfs));
+% % imagesc(abs(cwtcfs));
+% % axis xy
+% % shading interp
+% title('internal', 'Interpreter', 'latex', 'fontsize', 20);
+% subplot(1,2,2);
+% imagesc(abs(CWTResult));
+% % imagesc(abs(CWTResult(end:-1:1,:)));
+% % axis xy
+% % shading interp
+% title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
+% 
+% %% compare derivaties of wavelet coefficients
+% figure('Position', [1 scrsz(4)/2 scrsz(3)*2 scrsz(4)], 'Name', 'Derivatives of CWT coefficients');
+% subplot(1,2,1);
+% imagesc(abs(dcwtcfs));
+% title('internal', 'Interpreter', 'latex', 'fontsize', 20);
+% subplot(1,2,2);
+% imagesc(abs(DCWTResult));
+% title('Gaurav-Wu', 'Interpreter', 'latex', 'fontsize', 20);
 
 %% visualize and compare SST results
 % close(gcf);
 
-hq = figure('Position',[10 10 2*scrsz(3)/3 scrsz(4)/3]);
+hq = figure('Position',[scrsz(1) scrsz(2) scrsz(3) scrsz(4)]);
 
 subplot(2,1,1);
 % pcolor(tSamples, instFreqTic, log(1+abs(itvPS)));
@@ -143,9 +146,9 @@ colormap(1-gray);
 xlabel('Time (sec)', 'Interpreter', 'latex', 'fontsize', 20);
 ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
 title('SST-CWT', 'Interpreter', 'latex', 'fontsize', 20);
-hold on
-plot(tSamples, if1, 'r', 'linewidth', 1);
-plot(tSamples, if2, 'b', 'linewidth', 1);
+% hold on
+% plot(tSamples, if1, 'r', 'linewidth', 1);
+% plot(tSamples, if2, 'b', 'linewidth', 1);
 
 subplot(2,1,2);
 % pcolor(tSamples, sqcwt_tic, log(1+abs(Conceft_itvPS)));
@@ -161,3 +164,4 @@ ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
 hold on
 plot(tSamples, if1, 'r', 'linewidth', 1);
 plot(tSamples, if2, 'b', 'linewidth', 1);
+
