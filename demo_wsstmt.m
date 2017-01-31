@@ -55,31 +55,45 @@ targetSig = clean;
 
 %% SST-CWT
 tic;
-[sstmtResult, instFreqTic,sstmtCell] = wsstmt(targetSig, MT, Fs, 'morse',...
+[sstmtResult, instFreqTic, sstmtCell] = wsstmt(targetSig, MT, Fs, 'morse',...
     'VoicesPerOctave', 128, 'ExtendSignal', true,...
     'WaveletParameters', struct('be',30,'ga',3),...
     'SqType', 'linear', 'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 toc;
 
 %% save all images
-mtarray = cat(3,sstmtCell{:});
+% mtarray = cat(3,sstmtCell{:});
+% segIdx = 201:1400;
+% figure('Position',[scrsz(1) scrsz(2) scrsz(3)/2 scrsz(4)/2]);
+% for j=1:size(mtarray,3)
+%     itvPSmt = abs(Fs*(sum(mtarray(:,segIdx,1:j),3) / j).^2);
+%     itvPS_logscale = qclamp(log(1+itvPSmt), 0.001);
+%     pcolor(tSamples(segIdx), instFreqTic, itvPS_logscale);
+%     shading interp;
+%     colormap(1-gray);
+%     xlabel('Time (sec)', 'Interpreter', 'latex', 'fontsize', 20);
+%     ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
+%     title(sprintf('SST-CWT-MT, MT=%d', j), 'Interpreter', 'latex', 'fontsize', 20);
+%     print(sprintf('./result/MT%03d', j), '-djpeg');
+% end
+
+%% save results for each orthogonal wavelet
 segIdx = 201:1400;
+mtarray = cat(3,sstmtCell{:});
 figure('Position',[scrsz(1) scrsz(2) scrsz(3)/2 scrsz(4)/2]);
 for j=1:size(mtarray,3)
-    itvPSmt = abs(Fs*(sum(mtarray(:,segIdx,1:j),3) / j).^2);
+    itvPSmt = abs(Fs*mtarray(:,segIdx,j).^2);
     itvPS_logscale = qclamp(log(1+itvPSmt), 0.001);
     pcolor(tSamples(segIdx), instFreqTic, itvPS_logscale);
     shading interp;
     colormap(1-gray);
     xlabel('Time (sec)', 'Interpreter', 'latex', 'fontsize', 20);
     ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
-    title(sprintf('SST-CWT-MT, MT=%d', j), 'Interpreter', 'latex', 'fontsize', 20);
-    print(sprintf('./result/MT%03d', j), '-djpeg');
-%     saveas(gcf,['./result/MT' sprintf('%03d', j) '.png']);
-%     clf
+    title(sprintf('SST-CWT, Morse Wavelet k=%d', j-1), 'Interpreter', 'latex', 'fontsize', 20);
+    print(sprintf('./result/Morse%03d', j-1), '-djpeg');
 end
 
-% %% visualize and compare SST results
+%% visualize and compare SST results
 % segIdx = 201:1400;
 % itvPS = abs(Fs*sstmtResult(:,segIdx)/2).^2;
 % itvPS_logscale = qclamp(log(1+itvPS), 0.001);
