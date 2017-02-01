@@ -8,7 +8,7 @@ scrsz = get(groot,'ScreenSize');
 %% set up parameters
 Fs = 100;
 T = 16;
-MT = 100;
+MT = 8;
 tSamples = (1/Fs:1/Fs:T)';
 N = length(tSamples);
 FreqBounds = [0,0.2];
@@ -55,11 +55,27 @@ targetSig = clean;
 
 %% SST-CWT
 tic;
-[sstmtResult, instFreqTic, sstmtCell] = wsstmt(targetSig, MT, Fs, 'morse',...
+[sstmtResult, instFreqTic, sstmtCell, cwtcfsCell, cwtfreqsCell] = wsstmt(targetSig, MT, Fs, 'morse',...
     'VoicesPerOctave', 128, 'ExtendSignal', true,...
     'WaveletParameters', struct('be',30,'ga',3),...
     'SqType', 'linear', 'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 toc;
+
+%% visualize phase plots
+hq = figure('Position',[scrsz(1) scrsz(2) scrsz(3) scrsz(4)]);
+segIdx = 201:1400;
+for k = 1:MT
+%     subplot(2,2,k);
+%     subplot(ceil(MT/2),2,k);
+    pcolor(tSamples(segIdx), cwtfreqsCell{k}*Fs, angle(cwtcfsCell{k}(:,segIdx)));
+    shading interp;
+    colormap(1-gray);
+    hold on
+    plot(tSamples(segIdx), if1(segIdx), 'r', 'linewidth', 1);
+    plot(tSamples(segIdx), if2(segIdx), 'b', 'linewidth', 1);
+    title(sprintf('Morse Wavelet $k$=%d', k-1), 'Interpreter', 'latex', 'fontsize', 20);
+    print(sprintf('./result/zebra%03d', k-1), '-djpeg');
+end
 
 %% save all images
 % mtarray = cat(3,sstmtCell{:});
@@ -78,20 +94,20 @@ toc;
 % end
 
 %% save results for each orthogonal wavelet
-segIdx = 201:1400;
-mtarray = cat(3,sstmtCell{:});
-figure('Position',[scrsz(1) scrsz(2) scrsz(3)/2 scrsz(4)/2]);
-for j=1:size(mtarray,3)
-    itvPSmt = abs(Fs*mtarray(:,segIdx,j).^2);
-    itvPS_logscale = qclamp(log(1+itvPSmt), 0.001);
-    pcolor(tSamples(segIdx), instFreqTic, itvPS_logscale);
-    shading interp;
-    colormap(1-gray);
-    xlabel('Time (sec)', 'Interpreter', 'latex', 'fontsize', 20);
-    ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
-    title(sprintf('SST-CWT, Morse Wavelet k=%d', j-1), 'Interpreter', 'latex', 'fontsize', 20);
-    print(sprintf('./result/Morse%03d', j-1), '-djpeg');
-end
+% segIdx = 201:1400;
+% mtarray = cat(3,sstmtCell{:});
+% figure('Position',[scrsz(1) scrsz(2) scrsz(3)/2 scrsz(4)/2]);
+% for j=1:size(mtarray,3)
+%     itvPSmt = abs(Fs*mtarray(:,segIdx,j).^2);
+%     itvPS_logscale = qclamp(log(1+itvPSmt), 0.001);
+%     pcolor(tSamples(segIdx), instFreqTic, itvPS_logscale);
+%     shading interp;
+%     colormap(1-gray);
+%     xlabel('Time (sec)', 'Interpreter', 'latex', 'fontsize', 20);
+%     ylabel('Frequency (Hz)', 'Interpreter', 'latex', 'fontsize', 20);
+%     title(sprintf('SST-CWT, Morse Wavelet k=%d', j-1), 'Interpreter', 'latex', 'fontsize', 20);
+%     print(sprintf('./result/Morse%03d', j-1), '-djpeg');
+% end
 
 %% visualize and compare SST results
 % segIdx = 201:1400;

@@ -48,7 +48,7 @@ fprintf('snrdb = %f\n',snrdb);
 
 xm = clean + noise;
 
-targetSig = clean;
+targetSig = xm;
 
 % plot(targetSig);
 

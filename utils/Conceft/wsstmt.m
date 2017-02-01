@@ -1,4 +1,4 @@
-function [sstmt,f,mtcell] = wsstmt(x,mt,varargin)
+function [sstmt,f,mtcell,cwtcfscell,cwtfreqscell] = wsstmt(x,mt,varargin)
 %WSSTMT Multitapered Wavelet Synchrosqueezed Transform
 %
 % Tingran Gao (trgao10@math.duke.edu)
@@ -8,6 +8,8 @@ function [sstmt,f,mtcell] = wsstmt(x,mt,varargin)
 mtcell = cell(1,mt);
 fcell = cell(1,mt);
 vararginCell = cell(1,mt);
+cwtcfscell = cell(1,mt);
+cwtfreqscell = cell(1,mt);
 
 wavparamsflag = find(strncmpi('WaveletParameters',varargin,1));
 
@@ -17,7 +19,7 @@ for k=1:mt
 end
 
 parfor k=1:mt
-    [mtcell{k}, fcell{k}] = wsstgao(x,vararginCell{k}{:});
+    [mtcell{k}, fcell{k}, cwtcfscell{k}, cwtfreqscell{k}] = wsstgao(x,vararginCell{k}{:});
     mtcell{k} = mtcell{k}/sum(mtcell{k}(:));
 end
 
