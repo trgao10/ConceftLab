@@ -62,25 +62,29 @@ tic;
 toc;
 
 %% visualize phase plots
-% hq = figure('Position',[scrsz(1) scrsz(2) scrsz(3) scrsz(4)]);
+hq = figure('Position',[scrsz(1) scrsz(2) scrsz(3) scrsz(4)]);
 segIdx = 201:1400;
 [~,yAxisHigh] = min(abs(cwtfreqCell{1}*Fs-20));
 yAxisIdx = yAxisHigh:length(cwtfreqCell{1});
 for k = 1:MT
-    figure;
-%     subplot(ceil(MT/2),2,k);
+    subplot(ceil(MT/2),2,k);
+    drawObj = cwtcfsCell{k}(yAxisIdx,segIdx);
+    mask = abs(cwtcfsCell{k}(yAxisIdx,segIdx));
+    mask = mask > mean(mask(:)+0.5*std(mask(:)));
+    pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, angle(drawObj).*mask);
+%     pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, abs(mask));
+
 %     phaseTransPlot = phasetfCell{k}(yAxisIdx,segIdx)/(2*pi);
 %     phaseTransPlot(phaseTransPlot < 0) = 0;
 %     phaseTransPlot(abs(phaseTransPlot) > 1) = 0;
-    cwtcfsPhasePlot = angle(cwtcfsCell{k}(yAxisIdx,segIdx));
-%     cwtcfsPhasePlot(phaseTransPlot < 0 | abs(phaseTransPlot) > 0.2) = 0;
+% %     cwtcfsPhasePlot = angle(cwtcfsCell{k}(yAxisIdx,segIdx));
+% %     cwtcfsPhasePlot(phaseTransPlot < 0 | abs(phaseTransPlot) > 0.2) = 0;
 %     phasePlotLogVals = log(1+log(1+phaseTransPlot));
-%     phaseTransPlot(phasePlotLogVals > mean(phasePlotLogVals(:)+std(phasePlotLogVals(:)))) = 0;
-%     pcolor(tSamples(segIdx), cwtfreqCell{k}*Fs, log(1+log(1+phasePlot)));
+% %     phaseTransPlot(phasePlotLogVals > mean(phasePlotLogVals(:)+std(phasePlotLogVals(:)))) = 0;
+% %     pcolor(tSamples(segIdx), cwtfreqCell{k}*Fs, log(1+log(1+phasePlot)));
 %     pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, phaseTransPlot);
-    pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, cwtcfsPhasePlot);
-%     axis([6.5,11.5,6,14]);
-    axis([2,5,0,8]);
+% %     pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, cwtcfsPhasePlot);
+% %     axis([6.5,11.5,6,14]);
     shading interp;
     colormap(1-gray);
     hold on

@@ -55,40 +55,53 @@ targetSig = clean;
 
 %% SST-CWT
 tic;
-[sstmtResult, instFreqTic, sstmtCell, cwtcfsCell, phasetfCell, cwtfreqCell] = wsstmt(targetSig, MT, Fs, 'morse',...
-    'VoicesPerOctave', 128, 'ExtendSignal', true,...
-    'WaveletParameters', struct('be',30,'ga',3),...
-    'SqType', 'linear', 'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
+[sstmtResult, instFreqTic, sstmtCell, stftcfsCell, phasetfCell, stftfreqCell] = fsstmt(targetSig, MT, Fs, 'hermite',...
+    'ExtendSignal', false,...
+    'WindowParameters', struct('NumPts',377,'HalfWinSpt',10),...
+    'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 toc;
 
 %% visualize phase plots
 % hq = figure('Position',[scrsz(1) scrsz(2) scrsz(3) scrsz(4)]);
 segIdx = 201:1400;
-[~,yAxisHigh] = min(abs(cwtfreqCell{1}*Fs-20));
-yAxisIdx = yAxisHigh:length(cwtfreqCell{1});
+[~,yAxisHigh] = min(abs(stftfreqCell{1}*Fs-20));
+yAxisIdx = yAxisHigh:length(stftfreqCell{1});
 for k = 1:MT
-    figure;
-%     subplot(ceil(MT/2),2,k);
-%     phaseTransPlot = phasetfCell{k}(yAxisIdx,segIdx)/(2*pi);
-%     phaseTransPlot(phaseTransPlot < 0) = 0;
-%     phaseTransPlot(abs(phaseTransPlot) > 1) = 0;
-    cwtcfsPhasePlot = angle(cwtcfsCell{k}(yAxisIdx,segIdx));
-%     cwtcfsPhasePlot(phaseTransPlot < 0 | abs(phaseTransPlot) > 0.2) = 0;
-%     phasePlotLogVals = log(1+log(1+phaseTransPlot));
-%     phaseTransPlot(phasePlotLogVals > mean(phasePlotLogVals(:)+std(phasePlotLogVals(:)))) = 0;
-%     pcolor(tSamples(segIdx), cwtfreqCell{k}*Fs, log(1+log(1+phasePlot)));
-%     pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, phaseTransPlot);
-    pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, cwtcfsPhasePlot);
-%     axis([6.5,11.5,6,14]);
-    axis([2,5,0,8]);
+    subplot(ceil(MT/2),2,k);
+    itvPS = abs(Fs*sstmtCell{k}/2).^2;
+    itvPS_logscale = qclamp(log(1+itvPS), 0.005);
+    pcolor(tSamples(segIdx), instFreqTic, itvPS_logscale(:,segIdx));
     shading interp;
     colormap(1-gray);
-    hold on
-    plot(tSamples(segIdx), if1(segIdx), 'r', 'linewidth', 1);
-    plot(tSamples(segIdx), if2(segIdx), 'b', 'linewidth', 1);
-    title(sprintf('Morse Wavelet $k$=%d', k-1), 'Interpreter', 'latex', 'fontsize', 20);
-%     print(sprintf('./result/zebra%03d', k-1), '-djpeg');
+%     hold on
+%     plot(tSamples(segIdx), if1(segIdx), 'r', 'linewidth', 1);
+%     plot(tSamples(segIdx), if2(segIdx), 'b', 'linewidth', 1);
+%     title(sprintf('Hermite Function $k$=%d', k), 'Interpreter', 'latex', 'fontsize', 20);
 end
+
+% for k = 1:MT
+%     figure;
+% %     subplot(ceil(MT/2),2,k);
+% %     phaseTransPlot = phasetfCell{k}(yAxisIdx,segIdx)/(2*pi);
+% %     phaseTransPlot(phaseTransPlot < 0) = 0;
+% %     phaseTransPlot(abs(phaseTransPlot) > 1) = 0;
+%     cwtcfsPhasePlot = angle(stftcfsCell{k}(yAxisIdx,segIdx));
+% %     cwtcfsPhasePlot(phaseTransPlot < 0 | abs(phaseTransPlot) > 0.2) = 0;
+% %     phasePlotLogVals = log(1+log(1+phaseTransPlot));
+% %     phaseTransPlot(phasePlotLogVals > mean(phasePlotLogVals(:)+std(phasePlotLogVals(:)))) = 0;
+% %     pcolor(tSamples(segIdx), cwtfreqCell{k}*Fs, log(1+log(1+phasePlot)));
+% %     pcolor(tSamples(segIdx), (cwtfreqCell{k}(yAxisIdx))*Fs, phaseTransPlot);
+%     pcolor(tSamples(segIdx), (stftfreqCell{k}(yAxisIdx))*Fs, cwtcfsPhasePlot);
+% %     axis([6.5,11.5,6,14]);
+%     axis([2,5,0,8]);
+%     shading interp;
+%     colormap(1-gray);
+%     hold on
+%     plot(tSamples(segIdx), if1(segIdx), 'r', 'linewidth', 1);
+%     plot(tSamples(segIdx), if2(segIdx), 'b', 'linewidth', 1);
+%     title(sprintf('Morse Wavelet $k$=%d', k-1), 'Interpreter', 'latex', 'fontsize', 20);
+% %     print(sprintf('./result/zebra%03d', k-1), '-djpeg');
+% end
 
 %% save all images
 % mtarray = cat(3,sstmtCell{:});

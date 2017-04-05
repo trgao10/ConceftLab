@@ -1,4 +1,4 @@
-function [sst,f,cwtcfs,cwtfreqs] = wsstgao(x,varargin)
+function [sst,f,cwtcfs,phasetf,cwtfreqs] = wsstgao(x,varargin)
 %Wavelet Synchrosqueezed Transform (adapted from the wsst function shipped
 %with the MATLAB Wavelet Toolbox)
 %   Tingran Gao (trgao10@math.duke.edu)
@@ -109,6 +109,7 @@ omega = [0., omega, -omega(fix((N-1)/2):-1:1)];
 %%% Compute FFT of the (padded) time series
 xdft = fft(x);
 [psift,dpsift,cwtfreqs] = sstwaveft(params.WAV,omega,scales,params.wavparam);
+% keyboard
 
 %%% Obtain CWT coefficients and derivatives
 cwtcfs = ifft(repmat(xdft,NbSc,1).*psift,[],2);
@@ -278,7 +279,7 @@ if any(freqres)
     params.FreqRes = varargin{freqres+1};
     %validate the value is numeric
     validateattributes(params.FreqRes,{'numeric'},{'positive','scalar'},...
-        'wsstgao','VoicesPerOctave');
+        'wsstgao','FreqRes');
     varargin(freqres:freqres+1) = [];
     if isempty(varargin)
         return;

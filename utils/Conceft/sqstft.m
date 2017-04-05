@@ -65,8 +65,8 @@ for tIdx = 1:tLen
 	tf0 = zeros(NF,1); tf1 = zeros(NF,1);
     tf0(indices) = x(ti+tau).*conj(Win(hWinLen+1+tau)) / norm_h;
     tf1(indices) = x(ti+tau).*conj(dWin(hWinLen+1+tau)) / norm_h;
-    %%% after FFT the frequencies in tf0, tf1 ranges in [0,1], and we only
-    %%% pick the first half interval
+    %%% After FFT the frequencies in tf0, tf1 ranges in [0,1], and we only
+    %%% pick the first half interval.
     %%% tf0, tf1 are ordered from low-frequency to high-frequency
     tf0 = fft(tf0);
     tf0 = tf0(1:NF/2);
