@@ -1,4 +1,4 @@
-function [sst,f,stftcfs,phasetf,stftfreqs] = fsstgao(x,varargin)
+function [sst,f,stftcfs,phasetf,stftfreqs,reassntRule] = fsstgao(x,varargin)
 %STFT Synchrosqueezed Transform (adapted from the wsst function shipped
 %with the MATLAB Wavelet Toolbox)
 %   Tingran Gao (trgao10@math.duke.edu)
@@ -75,6 +75,7 @@ phasetf = zeros(NbFreq/2, tLen);
 stftfreqs = linspace(0, 0.5*params.fs, NbFreq/2)';
 sst = zeros(fLen, tLen);
 f = linspace(params.FreqBounds(1), params.FreqBounds(2), fLen)';
+reassntRule = nan(fLen, tLen);
 
 % keyboard
 
@@ -101,7 +102,7 @@ for tIdx = 1:tLen
     %%% Instantaneous frequencies are not bounded in [0,1]; instead, it can
     %%% be as large as 1/dt. The omega below is already transformed into
     %%% indices --- all instantaneous frequencies are multiplied by NF and
-    %%% rounded-off to index into corresponding frequency bins
+    %%% rounded-off to index into corresponding frequency bins.
     %%% More concretely, this should really be rounding-off the following:
     %%% (NF/2)*[tf1(avoid_warn)./(tf0(avoid_warn)+eps)/(2.0*pi)]/0.5
 	omega(avoid_warn) = round(imag(NbFreq*tf1(avoid_warn)./(tf0(avoid_warn)+eps)/(2.0*pi)));
@@ -114,7 +115,10 @@ for tIdx = 1:tLen
             %%% uses modified STFT instead of the standard STFT
             jcolhat = jcol-omega(jcol);
             if (jcolhat <= HIdx) && (jcolhat >= LIdx)
+                %%% elements in "jcol" go to elements in "jcolhat-LIdx+1"
             	sstLocal(jcolhat-LIdx+1) = sstLocal(jcolhat-LIdx+1) + tf0(jcol);
+                reassntRule(jcol,tIdx) = jcolhat-LIdx+1;
+%                 reassntRule(jcol,tIdx) = jcol-(jcolhat-LIdx+1);
             end
         end
     end
