@@ -1,0 +1,375 @@
+%% preparation
+close all;clc;
+clearvars
+path(pathdef);
+addpath(genpath(strcat(pwd, '/utils')), path);
+scrsz = get(groot,'ScreenSize');
+
+%%% also use the original code accompanying the critical paper
+addpath(genpath(strcat(pwd, '/external')), path);
+
+%% Simulation 1: Resolution of Two Tones
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% set up parameters
+Fs = 20;
+T = 500;
+
+nu1 = 2;
+nu2 = 2.25;
+r = 0.5;
+phi1 = 0;
+phi2 = 0;
+
+%%%% cosntruct signal
+tSamples = (1/Fs:1/Fs:T)';
+s = cos(2*pi*nu1*tSamples+phi1)+r*cos(2*pi*nu2*tSamples+phi2);
+
+%%%% window parameter
+f0 = 2; %% the critical paper used f0 in [7, 2, 1, 0.4]
+
+%%%% stft frequency range and resolution
+FreqBounds = [0,0.5];
+FreqRes = 1e-3;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use matlab built-in stft
+HalfWinSpt = 3;
+hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
+% gwin = @(x) exp(-x.^2/(2*f0^2));
+% wfunc = gwin(-hWinLen/Fs:1/Fs:hWinLen/Fs);
+% wfunc = wfunc / max(abs(wfunc));
+% nfft = fix(0.5/FreqRes); %% determine frequency resolution
+
+% [stft,freqLabel,timeLabel] = spectrogram(s,wfunc,length(wfunc)-1,2*nfft+1,Fs,'yaxis');
+
+tic
+[sstResult,instFreqTic,ts,stftcfs,stftFreq,phasetfBins]...
+    = fsstgao(s, Fs, 'hermite',...
+    'ExtendSignal', false,...
+    'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
+    'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
+fprintf('fsstgao: %f sec\n', toc);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use the code from the critical paper
+tic
+[SWFT,freq,wopt,WFT,wfreq,IFR]...
+    = sswft(s,Fs,'fstep',FreqRes*Fs,...
+    'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
+fprintf('sswft: %f sec\n', toc);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use the code from H.-T. Wu
+tic;
+[sstResult_ht,instFreqTic_ht,stftcfs_ht,phasetf,stftfreqs_ht,reassntRule]...
+    = fsstgao_bak(s, Fs, 'hermite',...
+    'ExtendSignal', false,...
+    'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
+    'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
+toc;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% make comparison plots
+figure('Name', 'Two Tones');
+
+itvPS = abs(Fs*SWFT/2).^2;
+itvPS_logscale = eclamp(log(1+itvPS), 1);
+
+subplot(1,3,1);
+pc1 = pcolor(tSamples,freq,itvPS_logscale);
+set(pc1,'EdgeColor','none');
+shading interp;
+colormap(1-gray);
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(itvPS_logscale,2)));
+ylabel(sprintf('num of rows: %d',size(itvPS_logscale,1)));
+% hold on
+% plot(tSamples,nu1*ones(size(tSamples)),'r');
+% plot(tSamples,nu2*ones(size(tSamples)),'m');
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+itvPS = abs(Fs*sstResult/2).^2;
+itvPS_logscale = eclamp(log(1+itvPS), 1);
+
+subplot(1,3,2);
+pc2 = pcolor(ts,instFreqTic,itvPS_logscale);
+set(pc2,'EdgeColor','none');
+shading interp;
+colormap(1-gray);
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(itvPS_logscale,2)));
+ylabel(sprintf('num of rows: %d',size(itvPS_logscale,1)));
+% hold on
+% plot(tSamples,nu1*ones(size(tSamples)),'r');
+% plot(tSamples,nu2*ones(size(tSamples)),'m');
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+itvPS = abs(Fs*sstResult_ht/2).^2;
+itvPS_logscale = eclamp(log(1+itvPS), 1);
+
+subplot(1,3,3);
+pc2 = pcolor(tSamples,instFreqTic_ht,itvPS_logscale);
+set(pc2,'EdgeColor','none');
+shading interp;
+colormap(1-gray);
+title('H.-T. Wu');
+xlabel(sprintf('num of cols: %d',size(itvPS_logscale,2)));
+ylabel(sprintf('num of rows: %d',size(itvPS_logscale,1)));
+% hold on
+% plot(tSamples,nu1*ones(size(tSamples)),'r');
+% plot(tSamples,nu2*ones(size(tSamples)),'m');
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% compare computed stft coefficients
+figure('Name', 'Two Tones: stft coefficients');
+
+subplot(1,3,1);
+pc1 = pcolor(tSamples,wfreq,abs(WFT));
+shading interp
+colormap(1-gray)
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(WFT,2)));
+ylabel(sprintf('num of rows: %d',size(WFT,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,2);
+pc2 = pcolor(ts,stftFreq,abs(stftcfs));
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(stftcfs,2)));
+ylabel(sprintf('num of rows: %d',size(stftcfs,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,3);
+pc2 = pcolor(tSamples,stftfreqs_ht,abs(stftcfs_ht));
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('H.-T. Wu');
+xlabel(sprintf('num of cols: %d',size(stftcfs,2)));
+ylabel(sprintf('num of rows: %d',size(stftcfs,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% compare phase transforms
+figure('Name', 'Two Tones: phase transforms');
+
+subplot(1,3,1);
+pc1 = pcolor(IFR);
+% pc1 = pcolor(tSamples,wfreq,IFR);
+shading interp
+colormap(1-gray)
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(IFR,2)));
+ylabel(sprintf('num of rows: %d',size(IFR,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,2);
+pc2 = pcolor(phasetfBins);
+% pc2 = pcolor(ts,stftFreq,phasetfBins);
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(phasetfBins,2)));
+ylabel(sprintf('num of rows: %d',size(phasetfBins,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,3);
+pc2 = pcolor(reassntRule);
+% pc2 = pcolor(ts,stftFreq,phasetfBins);
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('H.-T. Wu');
+xlabel(sprintf('num of cols: %d',size(phasetfBins,2)));
+ylabel(sprintf('num of rows: %d',size(phasetfBins,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+%% Simulation 2: Amplitude Modulation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% set up parameters
+Fs = 20;
+T = 500;
+
+nu1 = 0.25;
+nu2 = 2;
+r = 0.5;
+
+%%%% cosntruct signal
+tSamples = (1/Fs:1/Fs:T)';
+s = (1+0.5*cos(2*pi*nu1*tSamples)).*cos(2*pi*nu2*tSamples);
+
+%%%% window parameter
+f0 = 2; %% the critical paper used f0 in [7, 2, 1, 0.4]
+
+%%%% stft frequency range and resolution
+FreqBounds = [0,0.5];
+FreqRes = 1e-3;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use matlab built-in stft
+HalfWinSpt = 3;
+hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
+gwin = @(x) exp(-x.^2/(2*f0^2));
+wfunc = gwin(-hWinLen/Fs:1/Fs:hWinLen/Fs);
+wfunc = wfunc / max(abs(wfunc));
+nfft = fix(0.5/FreqRes); %% determine frequency resolution
+
+[stft,freqLabel,timeLabel] = spectrogram(s,wfunc,length(wfunc)-1,2*nfft+1,Fs,'yaxis');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use the code from the critical paper
+[SWFT,freq]=wft(s,Fs,'fstep',FreqRes*Fs,...
+    'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% make comparison plots
+figure('Name', 'Amplitude Modulation');
+
+subplot(1,2,1);
+pc1 = pcolor(tSamples,freq,abs(SWFT));
+shading interp
+colormap(1-gray)
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(SWFT,2)));
+ylabel(sprintf('num of rows: %d',size(SWFT,1)));
+
+subplot(1,2,2);
+pc2 = pcolor(timeLabel,freqLabel,abs(stft));
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(stft,2)));
+ylabel(sprintf('num of rows: %d',size(stft,1)));
+
+%% Simulation 3: Frequency Modulation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% set up parameters
+Fs = 20;
+T = 500;
+
+nu1 = 2;
+nu2 = 0.25;
+
+%%%% cosntruct signal
+tSamples = (1/Fs:1/Fs:T)';
+s = cos(2*pi*nu1*tSamples + sin(2*pi*nu2*tSamples));
+
+%%%% window parameter
+f0 = 1; %% the critical paper used f0 in [7, 2, 1, 0.4]
+
+%%%% stft frequency range and resolution
+FreqBounds = [0,0.5];
+FreqRes = 1e-3;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use matlab built-in stft
+HalfWinSpt = 3;
+hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
+gwin = @(x) exp(-x.^2/(2*f0^2));
+wfunc = gwin(-hWinLen/Fs:1/Fs:hWinLen/Fs);
+wfunc = wfunc / max(abs(wfunc));
+nfft = fix(0.5/FreqRes); %% determine frequency resolution
+
+[stft,freqLabel,timeLabel] = spectrogram(s,wfunc,length(wfunc)-1,2*nfft+1,Fs,'yaxis');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use the code from the critical paper
+[SWFT,freq]=wft(s,Fs,'fstep',FreqRes*Fs,...
+    'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% make comparison plots
+figure('Name', 'Frequency Modulation');
+
+subplot(1,2,1);
+pc1 = pcolor(tSamples,freq,abs(SWFT));
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(SWFT,2)));
+ylabel(sprintf('num of rows: %d',size(SWFT,1)));
+set(gca,'YLim',[0.1,4]);
+set(gca,'XLim',[40,60]);
+
+subplot(1,2,2);
+pc2 = pcolor(timeLabel,freqLabel,abs(stft));
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(stft,2)));
+ylabel(sprintf('num of rows: %d',size(stft,1)));
+set(gca,'YLim',[0.1,4]);
+set(gca,'XLim',[40,60]);
+
+%% Simulation 4: Noise and Its Effects
+%%%% set up parameters
+Fs = 50;
+T = 100;
+
+nu = 2;
+noiseLevel = 0.5;
+
+%%%% cosntruct signal
+tSamples = (1/Fs:1/Fs:T)';
+s = cos(2*pi*nu*tSamples) + (noiseLevel/sqrt(2))*wgn(length(tSamples),1,0);
+
+%%%% window parameter
+f0 = 7; %% the critical paper used f0 in [7, 2, 1, 0.4]
+
+%%%% stft frequency range and resolution
+FreqBounds = [0,0.5];
+FreqRes = 1e-3;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use matlab built-in stft
+HalfWinSpt = 3;
+hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
+gwin = @(x) exp(-x.^2/(2*f0^2));
+wfunc = gwin(-hWinLen/Fs:1/Fs:hWinLen/Fs);
+wfunc = wfunc / max(abs(wfunc));
+nfft = fix(0.5/FreqRes); %% determine frequency resolution
+
+[stft,freqLabel,timeLabel] = spectrogram(s,wfunc,length(wfunc)-1,2*nfft+1,Fs,'yaxis');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% use the code from the critical paper
+[SWFT,freq]=wft(s,Fs,'fstep',FreqRes*Fs,...
+    'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% make comparison plots
+figure('Name', 'Frequency Modulation');
+
+subplot(1,2,1);
+pc1 = pcolor(tSamples,freq,abs(SWFT));
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(SWFT,2)));
+ylabel(sprintf('num of rows: %d',size(SWFT,1)));
+set(gca,'YLim',[0.1,4]);
+set(gca,'XLim',[40,60]);
+
+subplot(1,2,2);
+pc2 = pcolor(timeLabel,freqLabel,abs(stft));
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(stft,2)));
+ylabel(sprintf('num of rows: %d',size(stft,1)));
+set(gca,'YLim',[0.1,4]);
+set(gca,'XLim',[40,60]);
