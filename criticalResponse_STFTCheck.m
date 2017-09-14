@@ -25,7 +25,7 @@ tSamples = (1/Fs:1/Fs:T)';
 s = cos(2*pi*nu1*tSamples+phi1)+r*cos(2*pi*nu2*tSamples+phi2);
 
 %%%% window parameter
-f0 = 0.4; %% the critical paper used f0 in [7, 2, 1, 0.4]
+f0 = 7; %% the critical paper used f0 in [7, 2, 1, 0.4]
 
 %%%% stft frequency range and resolution
 FreqBounds = [0,0.5];
@@ -89,7 +89,7 @@ tSamples = (1/Fs:1/Fs:T)';
 s = (1+0.5*cos(2*pi*nu1*tSamples)).*cos(2*pi*nu2*tSamples);
 
 %%%% window parameter
-f0 = 0.4; %% the critical paper used f0 in [7, 2, 1, 0.4]
+f0 = 2; %% the critical paper used f0 in [7, 2, 1, 0.4]
 
 %%%% stft frequency range and resolution
 FreqBounds = [0,0.5];
@@ -147,7 +147,7 @@ tSamples = (1/Fs:1/Fs:T)';
 s = cos(2*pi*nu1*tSamples + sin(2*pi*nu2*tSamples));
 
 %%%% window parameter
-f0 = 7; %% the critical paper used f0 in [7, 2, 1, 0.4]
+f0 = 1; %% the critical paper used f0 in [7, 2, 1, 0.4]
 
 %%%% stft frequency range and resolution
 FreqBounds = [0,0.5];

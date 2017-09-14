@@ -1,6 +1,10 @@
 function [outMat, lowQVal, highQVal] = qclamp(inMat, lowQ, highQ)
-%QCLAMP Summary of this function goes here
-%   Detailed explanation goes here
+%QCLAMP Naive thresholding
+%   simply set values in inMat beyond [lowQ,highQ] to 0
+%
+%   Tingran Gao (tingrangao@galton.uchicago.edu)
+%   last modified: Sep 13, 2017
+%
 
 if nargin < 3
     highQ = 1-lowQ;
