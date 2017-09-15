@@ -1,4 +1,4 @@
-function [sst,f,ts,stftcfs,stftFreq,phasetfBins] = fsstgao(x,varargin)
+function [sst,f,ts,stftcfs,stftFreq,phasetfBins,dstftcfs] = fsstgao(x,varargin)
 %STFT Synchrosqueezed Transform (adapted from the wsst function shipped
 %with the MATLAB Wavelet Toolbox)
 %   Tingran Gao (trgao10@math.duke.edu)
@@ -49,6 +49,9 @@ end
 
 %%% Generate window function
 [winfunc,dwinfunc] = sstwinfunc(params.WIN,params.winparam);
+winnorm = norm(winfunc);
+winfunc = winfunc / winnorm;
+dwinfunc = dwinfunc / winnorm;
 
 %%% Create frequency vector for output
 % freq = (params.FreqBounds(1)+params.FreqRes):params.FreqRes:params.FreqBounds(2);

@@ -489,7 +489,10 @@ end
 
 
 %Windowed Fourier Transform by itself
-WFT=zeros(SN,L)*NaN; IFR=zeros(SN,L)*NaN; ouflag=0; if wp.t2e-wp.t1e>L/fs, coib1=0; coib2=0; end
+WFT=zeros(SN,L)*NaN;
+dWFT=zeros(SN,L)*NaN;
+IFR=zeros(SN,L)*NaN;
+ouflag=0; if wp.t2e-wp.t1e>L/fs, coib1=0; coib2=0; end
 if ~isempty(strfind(lower(DispMode),'on')), pos=0; fprintf('Calculating Windowed Fourier Transform and its phase growth rate (%d frequencies from %0.3f to %0.3f): ',SN,wfreq(1),wfreq(end)); end
 for sn=1:SN
     freqwf=wfreq(sn)-ff; %frequencies for the window function
@@ -518,12 +521,18 @@ for sn=1:SN
     
     dcc=zeros(NL,1); dcc(ii)=fx(ii).*(1i*2*pi*ff(ii)).*fw(:); %convolution in the frequency domain
     dout=ifft(dcc,NL); % calculate WFT time derivative at each time
-    IFR(sn,1:L)=(1/2/pi)*imag(dout(1+n1:NL-n2)./out(1+n1:NL-n2));
+    dWFT(sn,1:L)=dout(1+n1:NL-n2);
+    
+    IFR(sn,1:L)=(1/2/pi)*imag(dWFT(sn,1:L)./WFT(sn,1:L));
+%     IFR(sn,1:L)=(1/2/pi)*imag(dout(1+n1:NL-n2)./out(1+n1:NL-n2));
     
     if ~isempty(strfind(lower(DispMode),'on')) && floor(100*sn/SN)>floor(100*(sn-1)/SN)
         cstr=num2str(floor(100*sn/SN)); fprintf([repmat('\b',1,pos),cstr,'%%']); pos=length(cstr)+1;
     end
 end
+
+IIFR = (1/(2*pi))*imag(dWFT./WFT);
+
 if ~isempty(strfind(lower(DispMode),'on')), fprintf('\n'); end
 if ouflag==1
     if ~isempty(fwt)
@@ -543,6 +552,7 @@ end
 %(the SWFT will be then cut to the cone of influence automatically)
 if strcmpi(CutEdges,'on')
     WFT(:,1:coib1)=NaN; WFT(:,1+L-coib2:L)=NaN;
+    dWFT(:,1:coib1)=NaN; dWFT(:,1+L-coib2:L)=NaN;
     IFR(:,1:coib1)=NaN; IFR(:,1+L-coib2:L)=NaN;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -577,13 +587,17 @@ end
 
 %Transform phase growth rate [IFR] to numbers of frequency bins
 IFR=1+floor((1/2)+(IFR-freq(1))/fstep); %for equally-spaced frequencies
-IFR(IFR<1 | IFR>FN | isnan(IFR))=0;
+IFR( IFR<1 | IFR>FN | isnan(IFR) )=0;
+
+IIFR=1+floor((1/2)+(IIFR-freq(1))/fstep);
+IIFR( IIFR<1 | IIFR>FN | isnan(IIFR) )=0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% moved to here
 if nargout>5
     if strcmpi(CutFreq,'on'), varargout{4}=IFR(wfreq>=fmin & wfreq<=fmax,:);
     else varargout{4}=IFR; end
+    varargout{5}=dWFT;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -597,6 +611,7 @@ SWFT=sparse(allfr,alltt,allsv,FN,L); clear allsc allfr alltt allsv;
 if nargout<4, clear WFT;
 elseif strcmpi(CutFreq,'on')
     WFT=WFT(wfreq>=fmin & wfreq<=fmax,:);
+    dWFT=dWFT(wfreq>=fmin & wfreq<=fmax,:);
     wfreq=freq;
 end
 
@@ -649,6 +664,8 @@ end
 
 if nargout>3, varargout{2}=WFT; end
 if nargout>4, varargout{3}=wfreq; end
+% if nargout>5, varargout{4}=IFR; end
+if nargout>6, varargout{5}=dWFT; end
 
 if nargout>2
     wopt=struct; %simulation parameters

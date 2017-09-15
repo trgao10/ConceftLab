@@ -1,4 +1,4 @@
-function [sst,f,stftcfs,phasetf,stftfreqs,reassntRule] = fsstgao_bak(x,varargin)
+function [sst,f,stftcfs,phasetf,stftfreqs,reassntRule,dstftcfs] = fsstgao_bak(x,varargin)
 %STFT Synchrosqueezed Transform (adapted from the wsst function shipped
 %with the MATLAB Wavelet Toolbox)
 %   Tingran Gao (trgao10@math.duke.edu)

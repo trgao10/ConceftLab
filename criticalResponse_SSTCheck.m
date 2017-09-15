@@ -43,7 +43,7 @@ hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
 % [stft,freqLabel,timeLabel] = spectrogram(s,wfunc,length(wfunc)-1,2*nfft+1,Fs,'yaxis');
 
 tic
-[sstResult,instFreqTic,ts,stftcfs,stftFreq,phasetfBins]...
+[sstResult,instFreqTic,ts,stftcfs,stftFreq,phasetfBins,dstftcfs]...
     = fsstgao(s, Fs, 'hermite',...
     'ExtendSignal', false,...
     'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
@@ -53,15 +53,40 @@ fprintf('fsstgao: %f sec\n', toc);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% use the code from the critical paper
 tic
-[SWFT,freq,wopt,WFT,wfreq,IFR]...
+[SWFT,freq,wopt,WFT,wfreq,IFR,dWFT]...
     = sswft(s,Fs,'fstep',FreqRes*Fs,...
     'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
 fprintf('sswft: %f sec\n', toc);
 
+%%% validate WFT and dWFT
+phasetf = (1/2/pi)*imag(dWFT./WFT);
+IFR2=1+floor((1/2)+(phasetf-FreqBounds(1)*Fs)/(FreqRes*Fs)); %for equally-spaced frequencies
+IFR2( IFR2<1 | IFR2>length(wfreq) | isnan(IFR2) )=0;
+
+figure('Name', 'WFT and dWFT');
+
+subplot(1,2,1);
+pc1 = pcolor(tSamples,freq,abs(WFT));
+set(pc1,'EdgeColor','none');
+shading interp;
+colormap(1-gray);
+title('critical paper: WFT');
+xlabel(sprintf('num of cols: %d',size(WFT,2)));
+ylabel(sprintf('num of rows: %d',size(WFT,1)));
+
+subplot(1,2,2);
+pc2 = pcolor(tSamples,freq,abs(dWFT));
+set(pc2,'EdgeColor','none');
+shading interp;
+colormap(1-gray);
+title('critical paper: dWFT');
+xlabel(sprintf('num of cols: %d',size(dWFT,2)));
+ylabel(sprintf('num of rows: %d',size(dWFT,1)));
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% use the code from H.-T. Wu
 tic;
-[sstResult_ht,instFreqTic_ht,stftcfs_ht,phasetf,stftfreqs_ht,reassntRule]...
+[sstResult_ht,instFreqTic_ht,stftcfs_ht,phasetf,stftfreqs_ht,reassntRule,dstftcfs_ht]...
     = fsstgao_bak(s, Fs, 'hermite',...
     'ExtendSignal', false,...
     'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
@@ -157,6 +182,43 @@ set(pc2,'EdgeColor','none');
 title('H.-T. Wu');
 xlabel(sprintf('num of cols: %d',size(stftcfs,2)));
 ylabel(sprintf('num of rows: %d',size(stftcfs,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% compare computed dstft coefficients
+figure('Name', 'Two Tones: dstft coefficients');
+
+subplot(1,3,1);
+pc1 = pcolor(tSamples,wfreq,abs(dWFT));
+shading interp
+colormap(1-gray)
+set(pc1,'EdgeColor','none');
+title('critical paper');
+xlabel(sprintf('num of cols: %d',size(dWFT,2)));
+ylabel(sprintf('num of rows: %d',size(dWFT,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,2);
+pc2 = pcolor(ts,stftFreq,abs(dstftcfs));
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('matlab built-in');
+xlabel(sprintf('num of cols: %d',size(dstftcfs,2)));
+ylabel(sprintf('num of rows: %d',size(dstftcfs,1)));
+% set(gca,'YLim',[1,3]);
+% set(gca,'XLim',[100,120]);
+
+subplot(1,3,3);
+pc2 = pcolor(tSamples,stftfreqs_ht,abs(dstftcfs_ht));
+shading interp
+colormap(1-gray)
+set(pc2,'EdgeColor','none');
+title('H.-T. Wu');
+xlabel(sprintf('num of cols: %d',size(dstftcfs_ht,2)));
+ylabel(sprintf('num of rows: %d',size(dstftcfs_ht,1)));
 % set(gca,'YLim',[1,3]);
 % set(gca,'XLim',[100,120]);
 
