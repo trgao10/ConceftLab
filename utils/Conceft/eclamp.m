@@ -16,10 +16,13 @@ energyThreshold = sum(sortedElements) * ptg;
 thresholdIdx = find(cumsum(sortedElements) >= energyThreshold-1e-4, 1);
 thresholdVal = sortedElements(thresholdIdx);
 
-outMat = abs(inMat).^2;
-mask = outMat < thresholdVal;
 outMat = inMat;
-outMat(mask) = 0;
+
+if ~isempty(thresholdVal)
+    sqInMat = abs(inMat).^2;
+    mask = sqInMat < thresholdVal;
+    outMat(mask) = 0;
+end
 
 end
 

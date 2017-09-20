@@ -48,7 +48,7 @@ nfft = fix(0.5/FreqRes); %% determine frequency resolution
     'fmin',FreqBounds(1)*Fs,'fmax',FreqBounds(2)*Fs,'f0',f0);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% make comparison plots
-figure('Name', 'Two Tones');
+figure('Name', 'Two Tones', 'WindowStyle', 'docked');
 
 subplot(1,2,1);
 pc1 = pcolor(tSamples,freq,abs(WFT));

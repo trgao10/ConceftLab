@@ -518,7 +518,7 @@ for sn=1:SN
     cc=zeros(NL,1); cc(ii)=fx(ii).*fw(:); %convolution in the frequency domain
     out=ifft(cc,NL); % calculate WFT at each time
     WFT(sn,1:L)=out(1+n1:NL-n2);
-    
+        
     dcc=zeros(NL,1); dcc(ii)=fx(ii).*(1i*2*pi*ff(ii)).*fw(:); %convolution in the frequency domain
     dout=ifft(dcc,NL); % calculate WFT time derivative at each time
     dWFT(sn,1:L)=dout(1+n1:NL-n2);
@@ -531,6 +531,35 @@ for sn=1:SN
     end
 end
 
+%% numerically verifying Parseval
+colIdx = 2000;
+fwinfunc = fwt(ff);
+% fwinfunc = fwinfunc([(length(fwinfunc)/2+2):end,1:(length(fwinfunc)/2+1)]);
+
+% figure;
+% plot(fwinfunc);
+
+twinfunc = ifftshift(fwinfunc);
+
+figure;
+% plot(twinfunc);
+plot(fwinfunc);
+hold on
+plot(fftshift(twinfunc),'r+');
+
+keyboard
+%% plot debugging figure
+colIdx = 2000;
+figure;
+plot(abs(WFT(:,colIdx)),'r-');
+HalfWinSpt = 3;
+hWinLen = fix(fs*f0*sqrt(2*HalfWinSpt));
+winfunc = twf(linspace(-HalfWinSpt,HalfWinSpt,2*hWinLen+1));
+timeDomainRes = fft(signal((-hWinLen:hWinLen) + colIdx + n1).*winfunc',2*size(WFT,1))/size(WFT,1)*(2*pi);
+hold on
+plot(abs(timeDomainRes(1:size(WFT,1))),'bo');
+
+%%
 IIFR = (1/(2*pi))*imag(dWFT./WFT);
 
 if ~isempty(strfind(lower(DispMode),'on')), fprintf('\n'); end

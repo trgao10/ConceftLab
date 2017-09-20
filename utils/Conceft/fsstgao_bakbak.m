@@ -1,4 +1,4 @@
-function [sst,f,ts,stftcfs,phasetf,stftfreqs,reassntRule] = fsstgao_bak(x,varargin)
+function [sst,f,ts,stftcfs,phasetf,stftfreqs,reassntRule] = fsstgao_bakbak(x,varargin)
 %STFT Synchrosqueezed Transform (adapted from the wsst function shipped
 %with the MATLAB Wavelet Toolbox)
 %   Tingran Gao (trgao10@math.duke.edu)
@@ -129,7 +129,6 @@ for tIdx = 1:tLen
     phasetf(:, tIdx) = omega(1:NbFreq/2);
 	sst(:, tIdx) = sstLocal * 2 * params.FreqRes;
 end
-
 
 % %%% Create frequency vector for STFT computation
 % omega = (1:fix(N/2));

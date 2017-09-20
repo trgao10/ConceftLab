@@ -16,7 +16,7 @@ T = 500;
 
 nu1 = 2;
 nu2 = 2.25;
-r = 0.5;
+r = 0;
 phi1 = 0;
 phi2 = 0;
 
@@ -25,7 +25,7 @@ tSamples = (1/Fs:1/Fs:T)';
 s = cos(2*pi*nu1*tSamples+phi1)+r*cos(2*pi*nu2*tSamples+phi2);
 
 %%%% window parameter
-f0 = 2; %% the critical paper used f0 in [7, 2, 1, 0.4]
+f0 = 7; %% the critical paper used f0 in [7, 2, 1, 0.4]
 
 %%%% stft frequency range and resolution
 FreqBounds = [0,0.5];
@@ -45,8 +45,8 @@ hWinLen = fix(Fs*f0*sqrt(2*HalfWinSpt));
 tic
 [sstResult,instFreqTic,ts,stftcfs,stftFreq,phasetfBins,dstftcfs]...
     = fsstgao(s, Fs, 'hermite',...
-    'ExtendSignal', false,...
-    'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
+    'ExtendSignal', true,...
+    'WindowParameters', struct('NumPts',2*hWinLen,'Order',1,'HalfWinSpt',HalfWinSpt),...
     'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 fprintf('fsstgao: %f sec\n', toc);
 
@@ -88,7 +88,7 @@ ylabel(sprintf('num of rows: %d',size(dWFT,1)));
 tic;
 [sstResult_ht,instFreqTic_ht,stftcfs_ht,phasetf,stftfreqs_ht,reassntRule,dstftcfs_ht]...
     = fsstgao_bak(s, Fs, 'hermite',...
-    'ExtendSignal', false,...
+    'ExtendSignal', true,...
     'WindowParameters', struct('NumPts',2*hWinLen+1,'Order',1,'HalfWinSpt',HalfWinSpt),...
     'FreqBounds', FreqBounds*Fs, 'FreqRes', FreqRes*Fs);
 toc;
@@ -115,6 +115,7 @@ ylabel(sprintf('num of rows: %d',size(itvPS_logscale,1)));
 % set(gca,'XLim',[100,120]);
 
 itvPS = abs(Fs*sstResult/2).^2;
+% itvPS = itvPS / sum(itvPS(:));
 itvPS_logscale = eclamp(log(1+itvPS), 1);
 
 subplot(1,3,2);
@@ -180,8 +181,8 @@ shading interp
 colormap(1-gray)
 set(pc2,'EdgeColor','none');
 title('H.-T. Wu');
-xlabel(sprintf('num of cols: %d',size(stftcfs,2)));
-ylabel(sprintf('num of rows: %d',size(stftcfs,1)));
+xlabel(sprintf('num of cols: %d',size(stftcfs_ht,2)));
+ylabel(sprintf('num of rows: %d',size(stftcfs_ht,1)));
 % set(gca,'YLim',[1,3]);
 % set(gca,'XLim',[100,120]);
 
@@ -257,10 +258,19 @@ shading interp
 colormap(1-gray)
 set(pc2,'EdgeColor','none');
 title('H.-T. Wu');
-xlabel(sprintf('num of cols: %d',size(phasetfBins,2)));
-ylabel(sprintf('num of rows: %d',size(phasetfBins,1)));
+xlabel(sprintf('num of cols: %d',size(reassntRule,2)));
+ylabel(sprintf('num of rows: %d',size(reassntRule,1)));
 % set(gca,'YLim',[1,3]);
 % set(gca,'XLim',[100,120]);
+
+%% more debugging figures
+colIdx = 1;
+
+figure;
+plot(abs(WFT(:,colIdx)).^2,'k*');
+hold on
+plot(abs(stftcfs(:,colIdx)).^2,'ro');
+plot(abs(stftcfs_ht(:,colIdx)).^2,'b+');
 
 %% Simulation 2: Amplitude Modulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

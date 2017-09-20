@@ -44,7 +44,7 @@ if params.pad
 end
 
 %%% Record data length plus any extension
-N = numel(x);
+% N = numel(x);
 
 %%% Generate window function
 [winfunc,dwinfunc] = sstwinfunc(params.WIN,params.winparam);
@@ -52,7 +52,10 @@ N = numel(x);
 %%% Create frequency vector for output
 % freq = params.FreqBounds(1):params.FreqRes:params.FreqBounds(2);
 % NbFreq = length(freq);
-NbFreq = numel(-0.5*params.fs+params.FreqRes:params.FreqRes:0.5*params.fs);
+% NbFreq = numel(-0.5*params.fs+params.FreqRes:params.FreqRes:0.5*params.fs);
+NbFreq = numel(-0.5*params.fs:params.FreqRes:0.5*params.fs);
+% NbFreq = 2*fix((params.FreqBounds(2)-params.FreqBounds(1))/params.FreqRes)+1;
+stftfreqs = linspace(0, 0.5*params.fs, fix(NbFreq/2)+1)';
 
 %%% winfunc and dwinfunc should have exactly the same size
 [hrow,hcol] = size(winfunc);
@@ -63,38 +66,52 @@ end
 
 %%% Since the signal is real, only concerned about the positive frequency
 %%% half interval
-LIdx = round((NbFreq/2)*(params.FreqBounds(1)/0.5/params.fs)) + 1;
-HIdx = round((NbFreq/2)*(params.FreqBounds(2)/0.5/params.fs));
+LIdx = round(params.FreqBounds(1)/params.FreqRes);
+HIdx = round(params.FreqBounds(2)/params.FreqRes);
+assert(HIdx-LIdx+1 == length(stftfreqs), 'frequency dimension mismatch');
+% LIdx = round((NbFreq/2)*(params.FreqBounds(1)/0.5/params.fs)) + 1;
+% HIdx = round((NbFreq/2)*(params.FreqBounds(2)/0.5/params.fs));
 fLen = HIdx - LIdx + 1;
-tLen = N;
+% tLen = N;
 
 %%% run STFT and reassignment rule
-stftcfs = zeros(NbFreq/2, tLen);
-dstftcfs = zeros(NbFreq/2, tLen);
-phasetf = zeros(NbFreq/2, tLen);
-stftfreqs = linspace(0, 0.5*params.fs, NbFreq/2)';
-sst = zeros(fLen, tLen);
-f = linspace(params.FreqBounds(1), params.FreqBounds(2), fLen)';
-reassntRule = nan(fLen, tLen);
+% stftcfs = zeros(length(stftfreqs), tLen);
+% dstftcfs = zeros(length(stftfreqs), tLen);
+% phasetf = zeros(length(stftfreqs), tLen);
+% sst = zeros(length(stftfreqs), tLen);
+stftcfs = zeros(length(stftfreqs), nbSamp);
+dstftcfs = zeros(length(stftfreqs), nbSamp);
+phasetf = zeros(length(stftfreqs), nbSamp);
+sst = zeros(length(stftfreqs), nbSamp);
+reassntRule = nan(length(stftfreqs), nbSamp);
+
+f = linspace(params.FreqBounds(1), params.FreqBounds(2), length(stftfreqs))';
 
 % keyboard
 
-for tIdx = 1:tLen
-    tau = -min([round(NbFreq/2)-1,hWinLen,tIdx-1]):min([round(NbFreq/2)-1,hWinLen,N-tIdx]);
-    indices = rem(NbFreq+tau,NbFreq)+1;
-    norm_h = norm(winfunc(hWinLen+1+tau));
+for tIdx = NumExten+1:NumExten+nbSamp
+%     tau = -min([round(NbFreq/2)-1,hWinLen,tIdx-1]):min([round(NbFreq/2)-1,hWinLen,N-tIdx]);
+%     tau = -min([round(NbFreq/2)-1,hWinLen]):min([round(NbFreq/2)-1,hWinLen]);
+    tau = -hWinLen:hWinLen;
+%     indices = rem(NbFreq+tau,NbFreq)+1;
+%     norm_h = norm(winfunc(hWinLen+1+tau));
+    norm_h = 1;
 
     %%%% truncate signal using the window function
-	tf0 = zeros(NbFreq,1); tf1 = zeros(NbFreq,1);
-    tf0(indices) = x(tIdx+tau).*conj(winfunc(hWinLen+1+tau)) / norm_h;
-    tf1(indices) = x(tIdx+tau).*conj(dwinfunc(hWinLen+1+tau)) / norm_h;
+% 	tf0 = zeros(NbFreq,1); tf1 = zeros(NbFreq,1);
+%     tf0(indices) = x(tIdx+tau).*conj(winfunc(hWinLen+1+tau)) / norm_h;
+%     tf1(indices) = x(tIdx+tau).*conj(dwinfunc(hWinLen+1+tau)) / norm_h;
     %%% After FFT the frequencies in tf0, tf1 ranges in [0,1], and we only
     %%% pick the first half interval.
     %%% tf0, tf1 are ordered from low-frequency to high-frequency
-    tf0 = fft(tf0);
-    tf0 = tf0(1:NbFreq/2);
-    tf1 = fft(tf1);
-    tf1 = tf1(1:NbFreq/2);
+%     tf0 = fft(tf0);
+%     tf0 = tf0(1:fLen);
+%     tf1 = fft(tf1);
+%     tf1 = tf1(1:fLen);
+    tf0 = fft(x(tIdx+tau).*conj(winfunc(hWinLen+1+tau)) / norm_h, NbFreq);
+    tf0 = tf0(1:fLen);
+    tf1 = fft(x(tIdx+tau).*conj(dwinfunc(hWinLen+1+tau)) / norm_h, NbFreq);
+    tf1 = tf1(1:fLen);
 
 	%%%% get the first order omega
 	omega = zeros(size(tf1)) ;
@@ -109,7 +126,7 @@ for tIdx = 1:tLen
 
 	sstLocal = zeros(fLen,1);
     
-    for jcol = 1:NbFreq/2
+    for jcol = 1:fLen
         if abs(tf0(jcol)) > params.thr
             %%% additional shift of phase needed here because the algorithm
             %%% uses modified STFT instead of the standard STFT
@@ -117,18 +134,17 @@ for tIdx = 1:tLen
             if (jcolhat <= HIdx) && (jcolhat >= LIdx)
                 %%% elements in "jcol" go to elements in "jcolhat-LIdx+1"
             	sstLocal(jcolhat-LIdx+1) = sstLocal(jcolhat-LIdx+1) + tf0(jcol);
-                reassntRule(jcol,tIdx) = jcolhat-LIdx+1;
+                reassntRule(jcol,tIdx-NumExten) = jcolhat-LIdx+1;
 %                 reassntRule(jcol,tIdx) = jcol-(jcolhat-LIdx+1);
             end
         end
     end
 
-	stftcfs(:, tIdx) = tf0(1:NbFreq/2);
-    dstftcfs(:, tIdx) = tf1(1:NbFreq/2);
-    phasetf(:, tIdx) = omega(1:NbFreq/2);
-	sst(:, tIdx) = sstLocal * 2 * params.FreqRes;
+	stftcfs(:, tIdx-NumExten) = tf0(1:fLen);
+    dstftcfs(:, tIdx-NumExten) = tf1(1:fLen);
+    phasetf(:, tIdx-NumExten) = omega(1:fLen);
+	sst(:, tIdx-NumExten) = sstLocal * 2 * params.FreqRes;
 end
-
 
 % %%% Create frequency vector for STFT computation
 % omega = (1:fix(N/2));
@@ -152,9 +168,25 @@ end
 % dstftcfs = ifft(repmat(xdft,NbFreq,1).*dpsift,[],2);
 
 %%% Remove padding if any
-stftcfs = stftcfs(:,NumExten+1:end-NumExten);
-dstftcfs = dstftcfs(:,NumExten+1:end-NumExten);
-phasetf = phasetf(:,NumExten+1:end-NumExten);
+% stftcfs = stftcfs(:,NumExten+1:end-NumExten);
+% dstftcfs = dstftcfs(:,NumExten+1:end-NumExten);
+% phasetf = phasetf(:,NumExten+1:end-NumExten);
+dstftcfs = 1i*repmat(stftfreqs,1,size(dstftcfs,2)).*stftcfs-dstftcfs;
+% phasetf = phasetf(:,NumExten+1:end-NumExten);
+% sst = sst(:,NumExten+1:end-NumExten);
+% reassntRule = reassntRule(:,NumExten+1:end-NumExten);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% debugging code: compare above implementation with "spectrogram"
+% [debug_stftcfs,debug_stftFreq,debug_ts] = spectrogram(x,winfunc,length(winfunc)-1,2*fLen,'yaxis');
+% debug_dstftcfs = spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen,'yaxis');
+% 
+% debug_stftcfs = debug_stftcfs(:,NumExten+1:(NumExten+size(stftcfs,2)));
+% debug_dstftcfs = debug_dstftcfs(:,NumExten+1:(NumExten+size(stftcfs,2)));
+
+% keyboard
+% dstftcfs = 1i*repmat(stftFreq,1,length(ts)).*stftcfs-spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,'yaxis');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % %%% Compute the phase transform
 % %%% The factor 2*pi here comes from the specific form of Discrete Fourier

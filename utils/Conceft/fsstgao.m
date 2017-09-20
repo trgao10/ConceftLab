@@ -49,7 +49,8 @@ end
 
 %%% Generate window function
 [winfunc,dwinfunc] = sstwinfunc(params.WIN,params.winparam);
-winnorm = norm(winfunc);
+% winnorm = norm(winfunc);
+winnorm = 1;
 winfunc = winfunc / winnorm;
 dwinfunc = dwinfunc / winnorm;
 
@@ -67,7 +68,9 @@ fLen = fix((params.FreqBounds(2)-params.FreqBounds(1))/params.FreqRes);
 
 %%% Obtain STFT coefficients and derivatives
 [stftcfs,stftFreq,ts] = spectrogram(x,winfunc,length(winfunc)-1,2*fLen+1,'yaxis');
-dstftcfs = spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,'yaxis');
+dstftcfs = 1i*repmat(stftFreq,1,length(ts)).*stftcfs-spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,'yaxis');
+% dstftcfs = spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,'yaxis');
+
 % [stftcfs,stftFreq,ts] = spectrogram(x,winfunc,length(winfunc)-1,2*fLen+1,params.fs,'yaxis');
 % dstftcfs = spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,params.fs,'yaxis');
 % [stftcfs,stftFreq,ts] = spectrogram(x,winfunc,length(winfunc)-1,freq,params.fs,'yaxis');
@@ -80,8 +83,12 @@ dstftcfs = spectrogram(x,dwinfunc,length(dwinfunc)-1,2*fLen+1,'yaxis');
 % dstftcfs = ifft(repmat(xdft,NbFreq,1).*dpsift,[],2);
 
 %%% Remove padding (if any)
-stftcfs = stftcfs(:,NumExten+1:end-NumExten);
-dstftcfs = dstftcfs(:,NumExten+1:end-NumExten);
+stftcfs = stftcfs(:,NumExten+1:NumExten+nbSamp);
+dstftcfs = dstftcfs(:,NumExten+1:NumExten+nbSamp);
+ts = ts(:,NumExten+1:NumExten+nbSamp);
+% stftcfs = stftcfs(:,NumExten+1:end-NumExten);
+% dstftcfs = dstftcfs(:,NumExten+1:end-NumExten);
+% ts = ts(:,NumExten+1:end-NumExten);
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%% debug plotting
@@ -101,8 +108,9 @@ dstftcfs = dstftcfs(:,NumExten+1:end-NumExten);
 %%% Compute the phase transform
 %%% The factor 2*pi here comes from the specific form of Discrete Fourier
 %%% Transform, not the 2*pi in the angular frequency
+phasetf = imag(dstftcfs./stftcfs)/(2*pi);
 % phasetf = (repmat(stftFreq,1,length(ts))-imag(dstftcfs./stftcfs))/(2*pi);
-phasetf = (repmat(stftFreq,1,length(ts))-imag(dstftcfs./(stftcfs+eps)))/(2*pi);
+% phasetf = (repmat(stftFreq,1,length(ts))-imag(dstftcfs./(stftcfs+eps)))/(2*pi);
 % phasetf = (repmat(freq,1,length(ts))-imag(dstftcfs./stftcfs))/(2*pi);
 %%% (since we are working with modified stft, the phase transform undergoes
 %%% a correction)
