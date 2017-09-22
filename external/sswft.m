@@ -490,6 +490,10 @@ end
 
 %Windowed Fourier Transform by itself
 WFT=zeros(SN,L)*NaN;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% debugging code
+WFT_debug = zeros(SN,L)*NaN;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 dWFT=zeros(SN,L)*NaN;
 IFR=zeros(SN,L)*NaN;
 ouflag=0; if wp.t2e-wp.t1e>L/fs, coib1=0; coib2=0; end
@@ -518,6 +522,26 @@ for sn=1:SN
     cc=zeros(NL,1); cc(ii)=fx(ii).*fw(:); %convolution in the frequency domain
     out=ifft(cc,NL); % calculate WFT at each time
     WFT(sn,1:L)=out(1+n1:NL-n2);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%% debugging code
+    %%%% how to verify fwt is the Fourier transform of twf?
+    %%%% fwt = @(xi)exp(-(f0^2/2)*xi.^2)
+    %%%% twf = @(t)(1/sqrt(2*pi)/f0)*exp(-t.^2/(2*f0^2))
+    %%%%
+    
+    
+    freqWinFunc = fwt(2*pi*ff);
+    timeWinFunc = ifftshift(ifft(freqWinFunc));
+    timeTicks = ((1:length(timeWinFunc))-1-length(timeWinFunc)/2)/fs;
+    
+    figure;plot(timeWinFunc,'b.');
+    hold on;
+    plot(twf(timeTicks)/(2*pi),'r.');
+    
+    keyboard
+    signalPortionIdx = 1;
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
     dcc=zeros(NL,1); dcc(ii)=fx(ii).*(1i*2*pi*ff(ii)).*fw(:); %convolution in the frequency domain
     dout=ifft(dcc,NL); % calculate WFT time derivative at each time
